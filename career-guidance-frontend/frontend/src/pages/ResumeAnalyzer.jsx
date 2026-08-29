@@ -1,0 +1,151 @@
+import { useState } from "react";
+import { resumeApi } from "../services/resumeApi";
+
+export default function ResumeAnalyzer() {
+  const [targetRole, setTargetRole] = useState("Software Engineer");
+  const [resumeText, setResumeText] = useState("");
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleAnalyze = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+
+    try {
+      const res = await resumeApi.analyze({ targetRole, resumeText });
+      if (res.success) {
+        setResult(res.analysis);
+      }
+    } catch (err) {
+      setError(err.message || "Failed to analyze resume.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-5xl mx-auto space-y-8">
+        
+        {/* Header */}
+        <div className="text-center max-w-2xl mx-auto space-y-3">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-purple-50 border border-purple-200 text-purple-700 text-xs font-bold uppercase tracking-wider">
+            📄 AI Resume ATS Grader
+          </div>
+          <h1 className="text-4xl font-black text-slate-900 tracking-tight">
+            Optimize Your Resume for Campus Recruiters
+          </h1>
+          <p className="text-slate-500 text-sm">
+            Paste your resume text to evaluate keyword density, impact verbs, and ATS compatibility.
+          </p>
+        </div>
+
+        {/* Input Form */}
+        <form onSubmit={handleAnalyze} className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-sm space-y-5">
+          <div>
+            <label className="block text-sm font-bold text-slate-700 mb-2">Target Job Role</label>
+            <select
+              value={targetRole}
+              onChange={(e) => setTargetRole(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-semibold outline-none focus:bg-white focus:ring-2 focus:ring-purple-500"
+            >
+              <option value="Software Engineer">Software Engineer</option>
+              <option value="Full Stack Developer">Full Stack Developer</option>
+              <option value="Data Scientist">Data Scientist</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold text-slate-700 mb-2">Paste Resume Text / Summary</label>
+            <textarea
+              rows={8}
+              required
+              value={resumeText}
+              onChange={(e) => setResumeText(e.target.value)}
+              placeholder="Paste your experience, technical skills, and project summaries here..."
+              className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-purple-500"
+            />
+          </div>
+
+          {error && <div className="p-4 bg-red-50 text-red-700 rounded-2xl text-xs font-semibold">{error}</div>}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-3.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold rounded-2xl text-sm shadow-md shadow-purple-500/20 transition disabled:opacity-50"
+          >
+            {loading ? "Grading Resume Content..." : "Grade Resume with AI 🚀"}
+          </button>
+        </form>
+
+        {/* Results Card */}
+        {result && (
+          <div className="space-y-6">
+            
+            {/* Score Banner */}
+            <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-6">
+              <div>
+                <span className="text-xs font-bold text-purple-600 uppercase tracking-wider">ATS Score Report</span>
+                <h3 className="text-2xl font-black text-slate-900 mt-1">Role Match: {result.targetRole}</h3>
+                <p className="text-slate-500 text-sm mt-1">Based on keyword matching and industry ATS parsing metrics.</p>
+              </div>
+              <div className="flex flex-col items-center justify-center p-5 bg-purple-50 border border-purple-100 rounded-2xl min-w-[140px]">
+                <span className="text-4xl font-black text-purple-700">{result.overallScore}/100</span>
+                <span className="text-[10px] font-bold text-purple-800 uppercase tracking-widest mt-0.5">ATS Match</span>
+              </div>
+            </div>
+
+            {/* Metrics Breakdown */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+              <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm">
+                <p className="text-xs font-bold text-slate-400 uppercase">Role Keywords</p>
+                <h4 className="text-2xl font-black text-slate-900 mt-1">{result.breakdown.keywords}%</h4>
+                <p className="text-xs text-slate-500 mt-1">{result.matchedKeywords.length} matched keywords</p>
+              </div>
+              <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm">
+                <p className="text-xs font-bold text-slate-400 uppercase">Action Verbs</p>
+                <h4 className="text-2xl font-black text-slate-900 mt-1">{result.breakdown.actionVerbs}%</h4>
+                <p className="text-xs text-slate-500 mt-1">Impact statement score</p>
+              </div>
+              <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm">
+                <p className="text-xs font-bold text-slate-400 uppercase">Section Structure</p>
+                <h4 className="text-2xl font-black text-slate-900 mt-1">{result.breakdown.formatting}%</h4>
+                <p className="text-xs text-slate-500 mt-1">Core sections identified</p>
+              </div>
+            </div>
+
+            {/* Suggestions & Keywords */}
+            <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-sm space-y-4">
+              <h4 className="text-lg font-black text-slate-900">AI Feedback & Improvements</h4>
+              <ul className="space-y-2">
+                {result.suggestions.map((s, idx) => (
+                  <li key={idx} className="p-3.5 bg-slate-50 rounded-2xl text-xs font-semibold text-slate-700 flex items-start gap-2.5">
+                    <span className="text-purple-600 font-bold">💡</span>
+                    <span>{s}</span>
+                  </li>
+                ))}
+              </ul>
+
+              {result.missingKeywords.length > 0 && (
+                <div className="pt-2">
+                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Recommended Keywords to Include</p>
+                  <div className="flex flex-wrap gap-2">
+                    {result.missingKeywords.map((kw) => (
+                      <span key={kw} className="px-3 py-1 bg-purple-50 text-purple-700 text-xs font-bold rounded-xl border border-purple-100">
+                        + {kw}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+          </div>
+        )}
+
+      </div>
+    </div>
+  );
+}
