@@ -9,13 +9,11 @@ import StudentDashboard from "./pages/StudentDashboard";
 import MyApplications from "./pages/MyApplications";
 import Navbar from "./components/Navbar/Navbar";
 import StudentProfile from "./pages/StudentProfile";
-import RecruiterDashboard from "./pages/RecruiterDashboard";
-import AdminDashboard from "./pages/AdminDashboard";
 import Contact from "./pages/Contact";
 import JobDetail from "./pages/JobDetail";
 import ProtectedRoute from "./components/common/ProtectedRoute";
-
-
+import RecruiterDashboard from "./pages/RecruiterDashboard";
+import AdminDashboard from "./pages/AdminDashboard";
 
 
 export default function App() {
@@ -33,9 +31,9 @@ export default function App() {
           <Route path="/jobs/:id" element={<JobDetail />} />
           <Route path="/profile" element={<StudentProfile />} />
           <Route path="/recruiter/dashboard" element={<RecruiterDashboard />} />
-          <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/my-applications" element={<MyApplications />} />
+          <Route path="/admin" element={<AdminDashboard />} />
           {/* Recruiter Protected Route */}
 <Route
   path="/recruiter/dashboard"
