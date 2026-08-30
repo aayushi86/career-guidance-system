@@ -79,17 +79,37 @@ export default function Jobs() {
     fetchJobs();
   }, []);
 
-  const handleApply = async (jobId) => {
-    try {
-      const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
-      await axios.post(`${API_URL}/api/jobs/apply`, { jobId });
-      setAppliedIds((prev) => [...prev, jobId]);
-      alert("🎉 Application submitted! Verified placement dossier shared with recruiter.");
-    } catch (err) {
-      setAppliedIds((prev) => [...prev, jobId]);
-      alert("🎉 Application submitted! Verified placement dossier shared with recruiter.");
-    }
-  };
+  const handleApply = async (job) => {
+  try {
+    const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+
+    const payload = {
+      jobId: job._id,
+      jobTitle: job.title,
+      companyName: job.company,
+
+      applicantName: user.name || "Student",
+      applicantEmail: user.email || "test@gmail.com",
+
+      education: user.branch || "B.Sc IT",
+      skills: user.skills || [],
+
+      careerScore: studentProfile.score,
+      matchedCareer: job.title,
+    };
+
+    await axios.post(`${API_URL}/api/jobs/apply`, payload);
+
+    setAppliedIds((prev) => [...prev, job._id]);
+
+    alert("🎉 Application submitted successfully!");
+
+  } catch (err) {
+    console.log(err);
+  }
+};
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-8">
@@ -204,7 +224,7 @@ export default function Jobs() {
                 </div>
 
                 <button
-                  onClick={() => handleApply(job._id)}
+                  onClick={() => handleApply(job)}
                   disabled={hasApplied}
                   className={`w-full py-2.5 rounded-xl font-bold text-xs shadow-sm transition flex items-center justify-center gap-2 ${
                     hasApplied

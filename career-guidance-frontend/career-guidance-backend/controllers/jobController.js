@@ -1,4 +1,5 @@
 const Job = require("../models/Job");
+const Application = require("../models/Application");
 
 // GET /api/jobs - Fetch active campus drives
 const getJobs = async (req, res) => {
@@ -41,14 +42,58 @@ const getJobs = async (req, res) => {
 // POST /api/jobs/apply - 1-Click Apply
 const applyJob = async (req, res) => {
   try {
-    const { jobId } = req.body;
-    return res.status(200).json({
-      success: true,
-      message: "Application submitted successfully to placement drive!",
-      applicationId: `APP-${Date.now()}`,
+    const {
+      jobId,
+      jobTitle,
+      companyName,
+      applicantName,
+      applicantEmail,
+      careerScore,
+      education,
+      skills,
+      matchedCareer
+    } = req.body;
+
+    const application = await Application.create({
+      jobId,
+      jobTitle,
+      companyName,
+      applicantName,
+      applicantEmail,
+      careerScore,
+      education,
+      skills,
+      matchedCareer,
+      status: "Applied"
     });
+
+    return res.status(201).json({
+      success: true,
+      message: "Application submitted successfully",
+      application
+    });
+
   } catch (error) {
-    return res.status(500).json({ success: false, message: "Failed to submit application" });
+    console.log(error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to submit application"
+    });
+  }
+};
+
+const getMyApplications = async (req, res) => {
+  try {
+    const apps = await Application.find().sort({ createdAt: -1 });
+
+    return res.json({
+      success: true,
+      applications: apps
+    });
+
+  } catch (error) {
+    res.status(500).json({ success: false });
   }
 };
 
@@ -66,4 +111,5 @@ module.exports = {
   getJobs,
   applyJob,
   createJNF,
+  getMyApplications   
 };

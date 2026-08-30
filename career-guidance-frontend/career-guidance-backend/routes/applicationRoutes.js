@@ -107,4 +107,51 @@ router.get("/my", async (req, res) => {
   }
 });
 
+// 🔥 GET ALL APPLICATIONS (FOR RECRUITER)
+router.get("/", async (req, res) => {
+  try {
+    const applications = await Application.find().sort({ createdAt: -1 });
+
+    return res.status(200).json({
+      success: true,
+      applications,
+    });
+
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Error fetching applications",
+    });
+  }
+});
+
+// 🔥 UPDATE APPLICATION STATUS
+router.put("/:id", async (req, res) => {
+  try {
+    const { status, interviewDate, interviewTime, interviewLink } = req.body;
+
+    const updatedApp = await Application.findByIdAndUpdate(
+      req.params.id,
+      {
+        status,
+        interviewDate,
+        interviewTime,
+        interviewLink,
+      },
+      { new: true }
+    );
+
+    res.json({
+      success: true,
+      application: updatedApp,
+    });
+
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: "Update failed",
+    });
+  }
+});
+
 module.exports = router;
