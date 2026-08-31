@@ -3,7 +3,7 @@ const router = express.Router();
 const Application = require("../models/Application");
 const mongoose = require("mongoose");
 
-// POST /api/applications - Submit a new job application
+// POST - Apply Job
 router.post("/", async (req, res) => {
   try {
     const {
@@ -18,7 +18,6 @@ router.post("/", async (req, res) => {
       careerScore,
     } = req.body;
 
-    // Required fields check
     if (!jobTitle || !companyName || !applicantName || !applicantEmail) {
       return res.status(400).json({
         success: false,
@@ -26,18 +25,10 @@ router.post("/", async (req, res) => {
       });
     }
 
-    // Email format validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(applicantEmail)) {
-      return res.status(400).json({
-        success: false,
-        message: "Please provide a valid email address.",
-      });
-    }
+    const cleanEmail = applicantEmail.toLowerCase().trim();
 
-    // Check for duplicate application
     const existingApplication = await Application.findOne({
-      applicantEmail,
+      applicantEmail: cleanEmail,
       jobTitle,
       companyName,
     });
@@ -49,7 +40,6 @@ router.post("/", async (req, res) => {
       });
     }
 
-    // Handle valid vs dummy ObjectId
     const validJobId = mongoose.Types.ObjectId.isValid(jobId) ? jobId : null;
 
     const newApplication = await Application.create({
@@ -57,7 +47,7 @@ router.post("/", async (req, res) => {
       jobTitle,
       companyName,
       applicantName,
-      applicantEmail,
+      applicantEmail: cleanEmail,
       education,
       skills,
       matchedCareer,
@@ -70,17 +60,17 @@ router.post("/", async (req, res) => {
       message: `Successfully applied to ${jobTitle} at ${companyName}!`,
       application: newApplication,
     });
+
   } catch (error) {
-    console.error("Error creating job application:", error);
+    console.error(error);
     return res.status(500).json({
       success: false,
-      message: "Server error submitting application.",
-      error: error.message,
+      message: "Server error",
     });
   }
 });
 
-// GET /api/applications/my?email=student@example.com - View applicant history
+// GET MY APPLICATIONS
 router.get("/my", async (req, res) => {
   try {
     const { email } = req.query;
@@ -88,29 +78,15 @@ router.get("/my", async (req, res) => {
     if (!email) {
       return res.status(400).json({
         success: false,
-        message: "Email query param is required.",
+        message: "Email is required",
       });
     }
 
-    const applications = await Application.find({ applicantEmail: email }).sort({ createdAt: -1 });
+    const cleanEmail = email.toLowerCase().trim();
 
-    return res.status(200).json({
-      success: true,
-      count: applications.length,
-      applications,
-    });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: "Error fetching applications.",
-    });
-  }
-});
-
-// 🔥 GET ALL APPLICATIONS (FOR RECRUITER)
-router.get("/", async (req, res) => {
-  try {
-    const applications = await Application.find().sort({ createdAt: -1 });
+    const applications = await Application.find({
+      applicantEmail: cleanEmail,
+    }).sort({ createdAt: -1 });
 
     return res.status(200).json({
       success: true,
@@ -125,7 +101,24 @@ router.get("/", async (req, res) => {
   }
 });
 
-// 🔥 UPDATE APPLICATION STATUS
+// GET ALL (Recruiter/Admin)
+router.get("/", async (req, res) => {
+  try {
+    const applications = await Application.find().sort({ createdAt: -1 });
+
+    return res.status(200).json({
+      success: true,
+      applications,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Error fetching applications",
+    });
+  }
+});
+
+// UPDATE STATUS
 router.put("/:id", async (req, res) => {
   try {
     const { status, interviewDate, interviewTime, interviewLink } = req.body;
@@ -145,7 +138,6 @@ router.put("/:id", async (req, res) => {
       success: true,
       application: updatedApp,
     });
-
   } catch (err) {
     res.status(500).json({
       success: false,

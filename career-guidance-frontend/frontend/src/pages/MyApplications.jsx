@@ -1,13 +1,21 @@
 import { useEffect, useState } from "react";
 import { request } from "../services/api";
 
+console.log("🔥 INSIDE MY APPLICATIONS COMPONENT 🔥");
+
+console.log("MyApplications Page Loaded");
+
 const MyApplications = () => {
   const [applications, setApplications] = useState([]);
 
   useEffect(() => {
+    console.log("🔥 USE EFFECT RUNNING 🔥");
     const fetchApplications = async () => {
       try {
-        const res = await request("/jobs/my-applications");
+
+        const user = JSON.parse(localStorage.getItem("user"));
+        const res = await request(`/applications/my?email=${user.email}`);
+        console.log("MY APPLICATION API:", res); // 👈 ADD THIS
 
         if (res.success) {
           setApplications(res.applications);

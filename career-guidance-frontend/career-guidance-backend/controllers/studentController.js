@@ -27,8 +27,7 @@ const getStudentProfile = async (req, res) => {
     let student = await Student.findOne({ email: userEmail });
     const user = await User.findOne({ email: userEmail });
     const tests = await CareerTest.find({ email: userEmail }).sort({ createdAt: -1 });
-    const applications = await Application.find({ applicantEmail: userEmail });
-
+    const applications = await Application.find({ applicantEmail: userEmail }).sort({ createdAt: -1 });
     const latestTest = tests[0] || null;
 
     const profileData = {
@@ -41,7 +40,13 @@ const getStudentProfile = async (req, res) => {
       readinessScore: student?.readinessScore || (latestTest ? 85 : 70),
       totalApplications: applications.length,
       latestTest,
+      recentApplications: applications.slice(0, 3),
+      shortlistedCount: applications.filter(app => app.status === "Shortlisted").length,
     };
+
+      console.log("User Email:", userEmail);
+      console.log("Applications found:", applications.length);
+      console.log("Applications:", applications);
 
     return res.status(200).json({
       success: true,

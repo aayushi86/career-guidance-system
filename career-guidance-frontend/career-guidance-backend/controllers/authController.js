@@ -169,12 +169,21 @@ const verifyOtp = async (req, res) => {
     // Check if user exists; create account if first-time user
     let user = await User.findOne({ email: cleanEmail });
     if (!user) {
-      user = await User.create({
-        name: name ? name.trim() : cleanEmail.split("@")[0],
-        email: cleanEmail,
-        password: await bcrypt.hash(Math.random().toString(36), 10),
-        role: role || "student",
-      });
+      let finalRole = "student"; // default
+
+// 🔥 ADMIN EMAIL CHECK
+if (cleanEmail === "careerai.admin@gmail.com") {
+  finalRole = "admin";
+} else if (role === "recruiter") {
+  finalRole = "recruiter";
+}
+
+user = await User.create({
+  name: name ? name.trim() : cleanEmail.split("@")[0],
+  email: cleanEmail,
+  password: await bcrypt.hash(Math.random().toString(36), 10),
+  role: finalRole,
+});
     }
 
     // Clean up OTP record

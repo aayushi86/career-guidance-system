@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import {
   FaArrowRight,
   FaCheckCircle,
@@ -14,6 +15,7 @@ import { Button, Badge } from "../ui";
 function Hero() {
   const [search, setSearch] = useState("");
   const [searched, setSearched] = useState(false);
+  const navigate = useNavigate();
 
   const quickSearches = [
     "Data Analyst",
@@ -22,9 +24,9 @@ function Hero() {
   ];
 
   const handleSearch = () => {
-    if (search.trim() === "") return;
-    setSearched(true);
-  };
+  if (search.trim() === "") return;
+  navigate(`/jobs?search=${search}`); // ✅ REDIRECT
+};
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter") {
@@ -33,9 +35,8 @@ function Hero() {
   };
 
   const handleQuickSearch = (value) => {
-    setSearch(value);
-    setSearched(false);
-  };
+  navigate(`/jobs?search=${value}`); // ✅ direct redirect
+};
 
   return (
     <section className="relative overflow-hidden bg-slate-50">
@@ -162,9 +163,12 @@ function Hero() {
 >
   Take Career Test
   <FaArrowRight className="ml-2" />
-</Button><Button
+</Button>
+
+              <Button
                 variant="outline"
                 size="lg"
+                onClick={() => navigate("/jobs")}
               >
                 Explore Jobs
               </Button>

@@ -9,18 +9,18 @@ const getAdminStats = async (req, res) => {
     const totalStudents = await User.countDocuments({ role: "student" });
     const totalRecruiters = await User.countDocuments({ role: "recruiter" });
     const totalJobs = await Job.countDocuments();
+
     const applications = await Application.find();
 
-    const placedCount = applications.filter((a) => a.status === "Shortlisted" || a.status === "Interview Scheduled").length;
-    const placementRate = totalStudents > 0 ? Math.min(100, Math.round((placedCount / totalStudents) * 100)) : 0;
+    // ✅ Correct placed logic
+    const placedCount = applications.filter(
+        (a) => a.status === "Selected"
+      ).length;
 
-    // Aggregate domain statistics
-    const jobs = await Job.find();
-    const domainCounts = {};
-    jobs.forEach((j) => {
-      const domain = j.targetCareer || "General";
-      domainCounts[domain] = (domainCounts[domain] || 0) + 1;
-    });
+    const placementRate =
+      totalStudents > 0
+        ? Math.round((placedCount / totalStudents) * 100)
+        : 0;
 
     return res.status(200).json({
       success: true,
@@ -30,12 +30,12 @@ const getAdminStats = async (req, res) => {
         totalJobs,
         totalApplications: applications.length,
         placementRate,
-        domainDistribution: domainCounts,
       },
-      recentActivity: applications.slice(0, 8),
+      recentActivity: applications.reverse(), // latest first
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: "Error loading admin stats" });
+    console.log(error);
+    res.status(500).json({ success: false });
   }
 };
 

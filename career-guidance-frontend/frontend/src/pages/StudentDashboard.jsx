@@ -10,12 +10,13 @@ export default function StudentDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showReportModal, setShowReportModal] = useState(false);
+
   useEffect(() => {
     const fetchDashboard = async () => {
       try {
-        const res = await studentApi.getDashboard();
+        const res = await studentApi.getDashboard(user.email);   
         if (res.success) {
-          setData(res.dashboard);
+          setData(res.profile);
         }
       } catch (err) {
         setError(err.message || "Failed to load dashboard data");
@@ -30,6 +31,10 @@ export default function StudentDashboard() {
       setLoading(false);
     }
   }, [user]);
+
+  useEffect(() => {
+  console.log("Dashboard Data:", data);
+}, [data]);
 
   if (!user) {
     return (
@@ -59,7 +64,7 @@ export default function StudentDashboard() {
     );
   }
 
-  const latestTest = data?.latestCareerTest;
+  const latestTest = data?.latestTest;
 
   <button
   onClick={() => setShowReportModal(true)}

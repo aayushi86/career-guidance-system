@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { useLocation } from "react-router-dom";
 
 export default function Jobs() {
   const [jobs, setJobs] = useState([]);
@@ -7,10 +8,17 @@ export default function Jobs() {
   const [appliedIds, setAppliedIds] = useState([]);
   const [selectedDomain, setSelectedDomain] = useState("All");
 
+  const location = useLocation();
+  const query = new URLSearchParams(location.search);
+  const search = query.get("search");
+  const filteredJobs = jobs.filter((job) =>
+  job.title.toLowerCase().includes(search?.toLowerCase() || "")
+);
+
   // Read student assessment scores from local storage safely
   const studentProfile = (() => {
     try {
-      const user = JSON.parse(localStorage.getItem("user") || "{}");
+      const user = JSON.parse(localStorage.getItem("user"));
       const storedResults = JSON.parse(localStorage.getItem("careerTestResults") || "{}");
       return {
         name: user.name || "Student",
@@ -83,7 +91,9 @@ export default function Jobs() {
   try {
     const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
-    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    const user = JSON.parse(localStorage.getItem("user"));
+    console.log("Applying with email:", user?.email);
+
 
     const payload = {
       jobId: job._id,
@@ -91,7 +101,7 @@ export default function Jobs() {
       companyName: job.company,
 
       applicantName: user.name || "Student",
-      applicantEmail: user.email || "test@gmail.com",
+      applicantEmail: user?.email,
 
       education: user.branch || "B.Sc IT",
       skills: user.skills || [],
@@ -160,7 +170,7 @@ export default function Jobs() {
 
       {/* Jobs Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {jobs.map((job) => {
+        {filteredJobs.map((job) => {
           const isEligible = studentProfile.score >= (job.minAssessmentScore || 70);
           const hasApplied = appliedIds.includes(job._id);
 
