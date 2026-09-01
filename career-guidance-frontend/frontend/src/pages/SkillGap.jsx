@@ -1,8 +1,21 @@
-import React, { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function SkillGap() {
-  const [targetRole, setTargetRole] = useState("Software Engineer");
-  const [selectedSkills, setSelectedSkills] = useState(["Python", "SQL"]);
+
+  const [selectedRole, setSelectedRole] = useState("");
+  const [skills, setSkills] = useState([]); // ✅ ADD THIS
+
+useEffect(() => {
+  const saved = JSON.parse(localStorage.getItem("careerResult"));
+
+  if (saved) {
+    setSelectedRole(saved.career || "");
+    setSkills(saved.skills || []);
+    setSelectedSkills(saved.skills || []);
+  }
+}, []);
+
+  const [targetRole, setTargetRole] = useState(selectedRole || "Software Engineer");    const [selectedSkills, setSelectedSkills] = useState(["Python", "SQL"]);
   const [analysisResult, setAnalysisResult] = useState(null);
 
   const availableSkills = [
