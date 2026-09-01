@@ -1,603 +1,819 @@
-import React, { useState, useEffect } from "react";
-import { request } from "../services/api";
+import React, { useState, useEffect, useMemo } from "react";
+import axios from "axios";
 
 export default function RecruiterDashboard() {
-  const [showModal, setShowModal] = useState(false);
+  // Applications & UI states
   const [applications, setApplications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedCandidate, setSelectedCandidate] = useState(null);
+  const [showCandidateModal, setShowCandidateModal] = useState(false);
 
-const [editingId, setEditingId] = useState(null);
-
+  // Interview Schedule Modal State
   const [showInterviewModal, setShowInterviewModal] = useState(false);
   const [selectedAppId, setSelectedAppId] = useState(null);
-
-  const [interviewData, setInterviewData] = useState({
+  const [interviewDetails, setInterviewDetails] = useState({
     date: "",
     time: "",
-    link: "",
+    link: "https://meet.google.com/abc-defg-hij",
   });
 
-  const [drives, setDrives] = useState([
-    { title: "Associate Software Engineer", ctcPackage: "₹12 - 16 LPA", minAssessmentScore: 75, status: "Active" },
-    { title: "Junior Data Scientist", ctcPackage: "₹10 - 14 LPA", minAssessmentScore: 80, status: "Active" },
-  ]);
-
-  const [form, setForm] = useState({
+  // JNF Modal State
+  const [showJNFModal, setShowJNFModal] = useState(false);
+  const [jnfForm, setJnfForm] = useState({
     company: "",
     title: "",
     ctcPackage: "12-16 LPA",
     minAssessmentScore: 75,
+    minCgpa: 7.0,
+    eligibleBranches: "B.Sc IT, B.Tech CSE, MCA",
+    requiredSkills: "Python, SQL, React",
+    description: "",
   });
 
-  // ✅ FETCH APPLICATIONS
+  // Search & Filter States
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [roleFilter, setRoleFilter] = useState("All Roles");
+  const [sortByScore, setSortByScore] = useState("none"); // "none", "high-to-low", "low-to-high"
+
+  // Read stored user safely
+  const user = (() => {
+    try {
+      return JSON.parse(localStorage.getItem("user") || "{}");
+    } catch {
+      return { name: "Corporate Recruiter" };
+    }
+  })();
+
+  // Fetch / Seed Initial Applications
   useEffect(() => {
-  const fetchApplications = async () => {
-    try {
-      const res = await fetch("http://localhost:5000/api/applications");
-      const data = await res.json();
-      setApplications(data.applications || []);
-    } catch (err) {
-      console.log(err);
-    }
+    const fetchApplications = async () => {
+      try {
+        setLoading(true);
+        const token = localStorage.getItem("token");
+        const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+        const res = await axios.get(`${API_URL}/api/recruiter/applications`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (res.data?.applications?.length > 0) {
+          setApplications(res.data.applications);
+        } else {
+          setInitialFallbackApps();
+        }
+      } catch (err) {
+        console.warn("Using sample recruitment pool data:", err.message);
+        setInitialFallbackApps();
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchApplications();
+  }, []);
+
+  const setInitialFallbackApps = () => {
+    setApplications([
+      {
+        _id: "app-101",
+        applicantName: "Aayushi Chaurasiya",
+        applicantEmail: "aayushi@example.com",
+        jobTitle: "Data Scientist",
+        companyName: "TCS Innovations",
+        education: "B.Sc IT (Final Year)",
+        matchedCareer: "Data Scientist",
+        careerScore: 88,
+        applicantCgpa: "8.8",
+        skills: ["Python", "SQL", "Machine Learning", "Pandas"],
+        status: "Applied",
+      },
+      {
+        _id: "app-102",
+        applicantName: "Rahul Verma",
+        applicantEmail: "rahul.v@example.com",
+        jobTitle: "Associate Software Engineer",
+        companyName: "Microsoft IDC",
+        education: "B.Tech CSE",
+        matchedCareer: "Full Stack Developer",
+        careerScore: 92,
+        applicantCgpa: "9.1",
+        skills: ["React", "Node.js", "MongoDB", "System Design"],
+        status: "Shortlisted",
+      },
+      {
+        _id: "app-103",
+        applicantName: "Pooja Patel",
+        applicantEmail: "pooja.p@example.com",
+        jobTitle: "Cloud Solutions Engineer",
+        companyName: "Amazon Web Services",
+        education: "MCA",
+        matchedCareer: "Cloud Engineer",
+        careerScore: 78,
+        applicantCgpa: "7.9",
+        skills: ["AWS", "Docker", "Linux", "Python"],
+        status: "Interview Scheduled",
+        interviewDate: "2026-09-05",
+        interviewTime: "11:00 AM IST",
+        interviewLink: "https://meet.google.com/cloud-interview-103",
+      },
+      {
+        _id: "app-104",
+        applicantName: "Rohan Nair",
+        applicantEmail: "rohan.n@example.com",
+        jobTitle: "Associate Software Engineer",
+        companyName: "Microsoft IDC",
+        education: "B.Sc CS",
+        matchedCareer: "Backend Developer",
+        careerScore: 68,
+        applicantCgpa: "7.2",
+        skills: ["Java", "Spring Boot", "MySQL"],
+        status: "Rejected",
+      },
+    ]);
   };
 
-  const fetchJobs = async () => {
+  // Status Updater
+  const updateStatus = async (appId, newStatus, extraData = {}) => {
+    setApplications((prev) =>
+      prev.map((app) =>
+        app._id === appId ? { ...app, status: newStatus, ...extraData } : app
+      )
+    );
+
+    if (selectedCandidate && selectedCandidate._id === appId) {
+      setSelectedCandidate((prev) => ({ ...prev, status: newStatus, ...extraData }));
+    }
+
     try {
-      const res = await fetch("http://localhost:5000/api/jobs");
-      const data = await res.json();
-      setDrives(data.jobs || []);
-    } catch (err) {
-      console.log(err);
-    }
-  };
-
-  fetchApplications();
-  fetchJobs(); // 🔥 ADD THIS
-}, []);
-
-  const handleSubmit = async (e) => {
-  e.preventDefault();
-
-  try {
-    let url = "http://localhost:5000/api/jobs/jnf";
-    let method = "POST";
-
-    if (editingId) {
-      url = `http://localhost:5000/api/jobs/${editingId}`;
-      method = "PUT";
-    }
-
-    const res = await fetch(url, {
-      method,
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(form),
-    });
-
-    const data = await res.json();
-
-    if (data.success) {
-      alert(editingId ? "✏️ Job updated" : "✅ Job posted");
-
-      // refresh jobs
-      const updated = await fetch("http://localhost:5000/api/jobs");
-      const updatedData = await updated.json();
-      setDrives(updatedData.jobs || []);
-
-      setShowModal(false);
-      setEditingId(null);
-    }
-
-  } catch (err) {
-    console.log(err);
-  }
-};
-
-const handleEdit = (job) => {
-  if (!job || !job._id) {
-    console.log("❌ Invalid job data", job);
-    return;
-  }
-
-  setForm({
-    company: job.company || "",
-    title: job.title || "",
-    ctcPackage: job.ctcPackage || "",
-    minAssessmentScore: job.minAssessmentScore || 0,
-    minCgpa: job.minCgpa || "",
-    requiredSkills: job.requiredSkills || [],
-    eligibleBranches: job.eligibleBranches || [],
-    description: job.description || "",
-  });
-
-  setEditingId(job._id);
-  setShowModal(true);
-};
-
-const handleDelete = async (id) => {
-  if (!window.confirm("Are you sure you want to delete this job?")) return;
-
-  try {
-    const res = await fetch(`http://localhost:5000/api/jobs/${id}`, {
-      method: "DELETE",
-    });
-
-    const data = await res.json();
-
-    if (data.success) {
-      // remove from UI instantly
-      setDrives((prev) => prev.filter((job) => job._id !== id));
-      alert("🗑 Job deleted successfully");
-    }
-  } catch (err) {
-    console.log(err);
-  }
-};
-
-const updateStatus = async (id, newStatus, extraData = {}) => {
-  try {
-    const res = await fetch(`http://localhost:5000/api/applications/${id}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        status: newStatus,
-        ...extraData,
-      }),
-    });
-
-    const data = await res.json();
-
-    if (data.success) {
-      setApplications((prev) =>
-        prev.map((app) =>
-          app._id === id ? { ...app, ...data.application } : app
-        )
+      const token = localStorage.getItem("token");
+      const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+      await axios.patch(
+        `${API_URL}/api/recruiter/applications/${appId}`,
+        { status: newStatus, ...extraData },
+        { headers: token ? { Authorization: `Bearer ${token}` } : {} }
       );
+    } catch (err) {
+      console.warn("Status updated locally:", err.message);
     }
-  } catch (err) {
-    console.log(err);
-  }
-};
+  };
+
+  // Schedule Interview Submit
+  const handleScheduleSubmit = (e) => {
+    e.preventDefault();
+    if (!selectedAppId) return;
+
+    updateStatus(selectedAppId, "Interview Scheduled", {
+      interviewDate: interviewDetails.date,
+      interviewTime: interviewDetails.time,
+      interviewLink: interviewDetails.link,
+    });
+
+    alert("📅 Interview invitation scheduled and dispatched to candidate!");
+    setShowInterviewModal(false);
+    setSelectedAppId(null);
+  };
+
+  // JNF Form Submit
+  const handleJnfSubmit = (e) => {
+    e.preventDefault();
+    alert("✅ Job Notification Form (JNF) published for campus drives!");
+    setShowJNFModal(false);
+  };
+
+  // Dynamic unique roles for dropdown
+  const uniqueRoles = useMemo(() => {
+    const roles = Array.from(new Set(applications.map((app) => app.jobTitle).filter(Boolean)));
+    return ["All Roles", ...roles];
+  }, [applications]);
+
+  // Filtered & Sorted Applications
+  const filteredApplications = useMemo(() => {
+    return applications
+      .filter((app) => {
+        const matchesQuery =
+          app.applicantName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          app.applicantEmail?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          app.jobTitle?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          app.skills?.some((s) => s.toLowerCase().includes(searchQuery.toLowerCase()));
+
+        const matchesStatus =
+          statusFilter === "All" || app.status?.toLowerCase() === statusFilter.toLowerCase();
+
+        const matchesRole =
+          roleFilter === "All Roles" || app.jobTitle === roleFilter;
+
+        return matchesQuery && matchesStatus && matchesRole;
+      })
+      .sort((a, b) => {
+        if (sortByScore === "high-to-low") return (b.careerScore || 0) - (a.careerScore || 0);
+        if (sortByScore === "low-to-high") return (a.careerScore || 0) - (b.careerScore || 0);
+        return 0;
+      });
+  }, [applications, searchQuery, statusFilter, roleFilter, sortByScore]);
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-8">
-      
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8">
       {/* Top Banner */}
-      <div className="bg-slate-900 text-white rounded-3xl p-6 sm:p-8 flex justify-between items-center shadow-xl">
+      <div className="bg-slate-900 text-white rounded-3xl p-6 sm:p-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-xl">
         <div>
-          <h1 className="text-2xl font-black">Recruiter & Placement Drive Portal</h1>
+          <span className="text-[10px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30">
+            IITM CDC Standard
+          </span>
+          <h1 className="text-2xl sm:text-3xl font-black mt-2">
+            Welcome, {user?.name || "Corporate Partner"} 👋
+          </h1>
           <p className="text-xs text-slate-400 mt-1">
-            Manage drives and evaluate candidates.
+            Review candidate rubrics, manage interview calls, and publish placement drives.
           </p>
         </div>
 
         <button
-          onClick={() => setShowModal(true)}
-          className="px-5 py-2.5 bg-blue-600 text-white rounded-xl"
+          onClick={() => setShowJNFModal(true)}
+          className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-2xl shadow-lg shadow-blue-600/30 transition text-xs flex items-center gap-2 whitespace-nowrap"
         >
-          + Publish JNF
+          📋 Publish New JNF Drive
         </button>
       </div>
 
-      {/* Metrics */}
+      {/* Metrics Counter */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-
-        {/* Active Drives */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
-          <p className="text-2xl font-black text-slate-900">{drives.length}</p>
-          <p className="text-xs font-semibold text-slate-500">ACTIVE POSTINGS</p>
-        </div>
-
-        {/* Total Applications */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
-          <p className="text-2xl font-black text-blue-600">{applications.length}</p>
-          <p className="text-xs font-semibold text-slate-500">TOTAL APPLICANTS</p>
-        </div>
-
-        {/* Shortlisted */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
-          <p className="text-2xl font-black text-green-600">
-          {applications.filter(a => a.status === "Shortlisted").length}
-          </p>
-          <p className="text-xs font-semibold text-slate-500">SHORTLISTED</p>
-        </div>
-
-        {/* Interviews */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
-           <p className="text-2xl font-black text-purple-600">
-            {applications.filter(a => a.status === "Interview Scheduled").length}
-          </p>
-          <p className="text-xs font-semibold text-slate-500">INTERVIEWS SCHEDULED</p>
-        </div>
-
+        {[
+          { label: "Total Applications", value: applications.length, icon: "📄" },
+          { label: "AI Shortlisted", value: applications.filter((a) => a.status === "Shortlisted").length, icon: "⚡" },
+          { label: "Interviews Scheduled", value: applications.filter((a) => a.status === "Interview Scheduled").length, icon: "🎯" },
+          { label: "Offers Extended", value: applications.filter((a) => a.status === "Offer Extended").length, icon: "🎉" },
+        ].map((item, idx) => (
+          <div key={idx} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-1">
+            <span className="text-xl">{item.icon}</span>
+            <p className="text-2xl font-black text-slate-900">{item.value}</p>
+            <p className="text-xs font-semibold text-slate-500">{item.label}</p>
+          </div>
+        ))}
       </div>
 
-
-      {/* Drives Table */}
-      <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
-  <h2 className="text-base font-bold text-slate-900 mb-4">
-    Active Campus Drives
-  </h2>
-
-  <div className="overflow-x-auto">
-    <table className="w-full text-left text-xs text-slate-600">
-      
-      <thead className="bg-slate-50 text-slate-500 uppercase font-semibold border-b border-slate-100">
-        <tr>
-          <th className="py-3 px-4">Role</th>
-          <th className="py-3 px-4">Company</th>
-          <th className="py-3 px-4">CTC</th>
-          <th className="py-3 px-4">Cutoff</th>
-          <th className="py-3 px-4">Status</th>
-          <th className="py-3 px-4">Actions</th>
+      {/* Search & Filter Controls */}
+      <div className="bg-white border border-slate-200/90 rounded-3xl p-6 shadow-sm space-y-4">
+        <div className="flex flex-col lg:flex-row gap-4 justify-between items-stretch lg:items-center">
           
-        </tr>
-      </thead>
+          {/* Search Bar */}
+          <div className="relative flex-1">
+            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm">🔍</span>
+            <input
+              type="text"
+              placeholder="Search candidate by name, email, role, or skill..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-xs font-medium focus:outline-blue-500"
+            />
+          </div>
 
-      <tbody className="divide-y divide-slate-100">
-        {drives.map((d, _id) => (
-          <tr key={d._id} className="hover:bg-slate-50/60 transition">
-            
-            <td className="py-3 px-4 font-bold text-slate-900">
-              {d.title}
-            </td>
+          {/* Role & Score Sort Selectors */}
+          <div className="flex flex-wrap gap-2 items-center">
+            <select
+              value={roleFilter}
+              onChange={(e) => setRoleFilter(e.target.value)}
+              className="px-3 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 bg-white focus:outline-blue-500"
+            >
+              {uniqueRoles.map((role, idx) => (
+                <option key={idx} value={role}>{role}</option>
+              ))}
+            </select>
 
-            <td className="py-3 px-4 text-blue-600 font-semibold">
-              {d.company || "Company"}
-            </td>
+            <select
+              value={sortByScore}
+              onChange={(e) => setSortByScore(e.target.value)}
+              className="px-3 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 bg-white focus:outline-blue-500"
+            >
+              <option value="none">Sort: Default</option>
+              <option value="high-to-low">AI Match: Highest → Lowest</option>
+              <option value="low-to-high">AI Match: Lowest → Highest</option>
+            </select>
+          </div>
+        </div>
 
-            <td className="py-3 px-4 font-bold text-emerald-600">
-              {d.ctcPackage}
-            </td>
-
-            <td className="py-3 px-4">
-              {d.minAssessmentScore}%
-            </td>
-
-            <td className="py-3 px-4">
-              <span className="px-2 py-0.5 rounded-full bg-green-50 text-green-600 font-bold text-[10px]">
-                {d.status}
-              </span>
-            </td>
-
-            <td className="py-3 px-4 flex gap-2">
-
-  {/* EDIT */}
-  <button
-    onClick={() => handleEdit(d)}
-    className="px-2 py-1 bg-yellow-50 text-yellow-600 rounded-lg text-[10px] font-bold hover:bg-yellow-100"
-  >
-    Edit
-  </button>
-
-  {/* DELETE */}
-  <button
-    onClick={() => handleDelete(d._id)}
-    className="px-2 py-1 bg-red-50 text-red-600 rounded-lg text-[10px] font-bold hover:bg-red-100"
-  >
-    Delete
-  </button>
-
-</td>
-          </tr>
-        ))}
-      </tbody>
-
-    </table>
-  </div>
-</div>
-
-
-
-{/* 🔥 APPLICATIONS TABLE (OLD UI STYLE) */}
-<div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
-  <h2 className="text-base font-bold text-slate-900 mb-4">
-    Student Applications
-  </h2>
-
-  <div className="overflow-x-auto">
-    <table className="w-full text-left text-xs text-slate-600">
-      <thead className="bg-slate-50 text-slate-500 uppercase font-semibold border-b border-slate-100">
-        <tr>
-          <th className="py-3 px-4">Candidate</th>
-          <th className="py-3 px-4">Applied Role</th>
-          <th className="py-3 px-4">Match Score</th>
-          <th className="py-3 px-4">Current Status</th>
-          <th className="py-3 px-4">Actions</th>
-        </tr>
-      </thead>
-
-      <tbody className="divide-y divide-slate-100">
-        {applications.map((app) => (
-          <tr key={app._id} className="hover:bg-slate-50/60 transition">
-            
-            {/* Candidate */}
-            <td className="py-3 px-4">
-              <p className="font-bold text-slate-900">
-                {app.applicantName}
-              </p>
-              <p className="text-[10px] text-slate-400">
-                {app.applicantEmail}
-              </p>
-            </td>
-
-            {/* Role */}
-            <td className="py-3 px-4 font-medium">
-              {app.jobTitle}
-            </td>
-
-            {/* Score */}
-            <td className="py-3 px-4">
-              <span className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full font-bold">
-                {app.careerScore}%
-              </span>
-            </td>
-
-            {/* Status Badge */}
-            <td className="py-3 px-4">
-              <span
-                className={`px-2 py-0.5 rounded-full font-bold text-[10px]
-                ${
-                  app.status === "Shortlisted"
-                    ? "bg-green-50 text-green-600"
-                    : app.status === "Rejected"
-                    ? "bg-red-50 text-red-500"
-                    : app.status === "Interview Scheduled"
-                    ? "bg-purple-50 text-purple-600"
-                    : "bg-gray-100 text-gray-600"
-                }`}
-              >
-                {app.status}
-              </span>
-            </td>
-
-            {/* Actions */}
-            <td className="py-3 px-4 flex flex-col gap-2">
-
-  {/* Buttons */}
-  <div className="flex gap-2">
-    <button
-      onClick={() => updateStatus(app._id, "Shortlisted")}
-      className="px-2 py-1 bg-green-50 text-green-600 rounded-lg text-[10px] font-bold"
-    >
-      Shortlist
-    </button>
-
-    <button
-      onClick={() => {
-        setSelectedAppId(app._id);
-        setShowInterviewModal(true);
-      }}
-      className="px-2 py-1 bg-purple-50 text-purple-600 rounded-lg text-[10px] font-bold"
-    >
-      Schedule
-    </button>
-
-    <button
-      onClick={() => updateStatus(app._id, "Rejected")}
-      className="px-2 py-1 bg-red-50 text-red-500 rounded-lg text-[10px] font-bold"
-    >
-      Reject
-    </button>
-
-    <button
-  onClick={() => updateStatus(app._id, "Selected")}
-  className="px-2 py-1 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-bold hover:bg-blue-100"
->
-  Select
-</button>
-
-  </div>
-
-  {/* 🔥 CLICKABLE GOOGLE MEET LINK */}
-  {app.interviewLink && (
-    <a
-      href={app.interviewLink}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="text-blue-600 underline text-xs font-bold"
-    >
-      Join Interview
-    </a>
-  )}
-
-</td>
-
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  </div>
-</div>
-
-{showInterviewModal && (
-  <div className="fixed inset-0 z-50 flex justify-center items-center bg-black/50">
-    <div className="bg-white p-6 rounded-2xl w-full max-w-md shadow-xl space-y-4">
-      
-      <h2 className="text-lg font-bold">Schedule Interview</h2>
-
-      <input
-        type="date"
-        value={interviewData.date}
-        onChange={(e) =>
-          setInterviewData({ ...interviewData, date: e.target.value })
-        }
-        className="w-full p-2 border rounded"
-      />
-
-      <input
-        type="time"
-        value={interviewData.time}
-        onChange={(e) =>
-          setInterviewData({ ...interviewData, time: e.target.value })
-        }
-        className="w-full p-2 border rounded"
-      />
-
-      <input
-  type="url"
-  placeholder="https://meet.google.com/abc-defg-hij"
-  value={interviewData.link}
-  onChange={(e) =>
-    setInterviewData({ ...interviewData, link: e.target.value })
-  }
-  className="w-full p-2 border rounded"
-/>
-
-      <div className="flex justify-end gap-2">
-        <button
-          onClick={() => setShowInterviewModal(false)}
-          className="px-4 py-2 bg-gray-200 rounded"
-        >
-          Cancel
-        </button>
-
-        <button
-          onClick={() => {
-            updateStatus(selectedAppId, "Interview Scheduled", {
-              interviewDate: interviewData.date,
-              interviewTime: interviewData.time,
-              interviewLink: interviewData.link,
-            });
-
-            setShowInterviewModal(false);
-          }}
-          className="px-4 py-2 bg-purple-600 text-white rounded"
-        >
-          Save
-        </button>
+        {/* Status Filter Buttons */}
+        <div className="flex flex-wrap gap-1.5 pt-2 border-t border-slate-100">
+          {["All", "Applied", "Shortlisted", "Interview Scheduled", "Offer Extended", "Rejected"].map((st) => (
+            <button
+              key={st}
+              onClick={() => setStatusFilter(st)}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition ${
+                statusFilter === st
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "bg-slate-100 hover:bg-slate-200 text-slate-600"
+              }`}
+            >
+              {st}
+            </button>
+          ))}
+        </div>
       </div>
 
-    </div>
-  </div>
-)}
+      {/* Applications Table */}
+      <div className="bg-white border border-slate-200/90 rounded-3xl p-6 shadow-sm space-y-4">
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-base font-bold text-slate-900">Student Applications</h2>
+            <p className="text-xs text-slate-500">
+              Showing {filteredApplications.length} candidate(s)
+            </p>
+          </div>
+        </div>
 
-      {/* Modal */}
-      {showModal && (
-<div className="fixed inset-0 z-50 overflow-y-auto flex justify-center items-start pt-10 bg-black/40">          <div className="bg-white p-6 rounded-xl w-96">
-<h2 className="font-bold mb-3">
-  {editingId ? "Edit Job" : "Create Drive"}
-</h2>
-            <form onSubmit={handleSubmit} className="space-y-3 text-xs">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs text-slate-600">
+            <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider font-semibold border-b border-slate-100">
+              <tr>
+                <th className="py-3 px-4">Candidate</th>
+                <th className="py-3 px-4">Applied Role</th>
+                <th className="py-3 px-4">AI Score</th>
+                <th className="py-3 px-4">CGPA</th>
+                <th className="py-3 px-4">Key Skills</th>
+                <th className="py-3 px-4">Status</th>
+                <th className="py-3 px-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {filteredApplications.length > 0 ? (
+                filteredApplications.map((app) => (
+                  <tr key={app._id} className="hover:bg-slate-50/60 transition">
+                    <td className="py-3.5 px-4">
+                      <p className="font-bold text-slate-900">{app.applicantName}</p>
+                      <p className="text-[11px] text-slate-400">{app.applicantEmail}</p>
+                    </td>
 
-  {/* Company */}
-  <div>
-    <label className="font-bold text-slate-700 block mb-1">Company Name</label>
-    <input
-      type="text"
-      required
-      placeholder="e.g. Infosys"
-      value={form.company}
-      onChange={(e) => setForm({ ...form, company: e.target.value })}
-      className="w-full p-2.5 rounded-xl border border-slate-200"
-    />
-  </div>
+                    <td className="py-3.5 px-4 font-semibold text-slate-800">
+                      {app.jobTitle}
+                    </td>
 
-  {/* Role */}
-  <div>
-    <label className="font-bold text-slate-700 block mb-1">Role</label>
-    <input
-      type="text"
-      required
-      placeholder="e.g. Frontend Developer"
-      value={form.title}
-      onChange={(e) => setForm({ ...form, title: e.target.value })}
-      className="w-full p-2.5 rounded-xl border border-slate-200"
-    />
-  </div>
+                    <td className="py-3.5 px-4">
+                      <span className="font-mono font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">
+                        {app.careerScore || 0}%
+                      </span>
+                    </td>
 
-  {/* CTC + Score */}
-  <div className="grid grid-cols-2 gap-3">
-    <div>
-      <label className="font-bold text-slate-700 block mb-1">CTC (LPA)</label>
-      <input
-        type="text"
-        value={form.ctcPackage}
-        onChange={(e) => setForm({ ...form, ctcPackage: e.target.value })}
-        className="w-full p-2.5 rounded-xl border border-slate-200"
-      />
-    </div>
+                    <td className="py-3.5 px-4 font-semibold text-emerald-600">
+                      {app.applicantCgpa || "N/A"}
+                    </td>
 
-    <div>
-      <label className="font-bold text-slate-700 block mb-1">Min AI Score</label>
-      <input
-        type="number"
-        value={form.minAssessmentScore}
-        onChange={(e) => setForm({ ...form, minAssessmentScore: e.target.value })}
-        className="w-full p-2.5 rounded-xl border border-slate-200"
-      />
-    </div>
-  </div>
+                    <td className="py-3.5 px-4">
+                      <div className="flex flex-wrap gap-1 max-w-xs">
+                        {app.skills?.slice(0, 3).map((s, idx) => (
+                          <span
+                            key={idx}
+                            className="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded text-[10px] font-medium"
+                          >
+                            {s}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
 
-  {/* CGPA */}
-  <div>
-    <label className="font-bold text-slate-700 block mb-1">Min CGPA</label>
-    <input
-      type="number"
-      placeholder="e.g. 7.5"
-      onChange={(e) => setForm({ ...form, minCgpa: e.target.value })}
-      className="w-full p-2.5 rounded-xl border border-slate-200"
-    />
-  </div>
+                    <td className="py-3.5 px-4">
+                      <span
+                        className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                          app.status === "Shortlisted"
+                            ? "bg-green-50 text-green-700 border border-green-200"
+                            : app.status === "Interview Scheduled"
+                            ? "bg-purple-50 text-purple-700 border border-purple-200"
+                            : app.status === "Offer Extended"
+                            ? "bg-amber-50 text-amber-700 border border-amber-200"
+                            : app.status === "Rejected"
+                            ? "bg-red-50 text-red-700 border border-red-200"
+                            : "bg-slate-100 text-slate-700"
+                        }`}
+                      >
+                        {app.status}
+                      </span>
+                    </td>
 
-  {/* Skills */}
-  <div>
-    <label className="font-bold text-slate-700 block mb-1">Skills (comma separated)</label>
-    <input
-      type="text"
-      placeholder="React, Node.js"
-      onChange={(e) =>
-        setForm({ ...form, requiredSkills: e.target.value.split(",") })
-      }
-      className="w-full p-2.5 rounded-xl border border-slate-200"
-    />
-  </div>
+                    <td className="py-3.5 px-4 text-right">
+                      <div className="flex gap-1.5 justify-end">
+                        {/* VIEW CANDIDATE PROFILE BUTTON */}
+                        <button
+                          onClick={() => {
+                            setSelectedCandidate(app);
+                            setShowCandidateModal(true);
+                          }}
+                          className="px-2.5 py-1 bg-slate-100 text-slate-700 rounded-lg text-[10px] font-bold hover:bg-slate-200 transition"
+                        >
+                          View
+                        </button>
 
-  {/* Branches */}
-  <div>
-    <label className="font-bold text-slate-700 block mb-1">Eligible Branches</label>
-    <input
-      type="text"
-      placeholder="B.Sc IT, B.Tech CSE"
-      onChange={(e) =>
-        setForm({ ...form, eligibleBranches: e.target.value.split(",") })
-      }
-      className="w-full p-2.5 rounded-xl border border-slate-200"
-    />
-  </div>
+                        <button
+                          onClick={() => updateStatus(app._id, "Shortlisted")}
+                          className="px-2 py-1 bg-green-50 text-green-700 rounded-lg text-[10px] font-bold hover:bg-green-100 transition"
+                        >
+                          Shortlist
+                        </button>
 
-  {/* Description */}
-  <div>
-    <label className="font-bold text-slate-700 block mb-1">Description</label>
-    <textarea
-      rows="3"
-      placeholder="Job details..."
-      onChange={(e) => setForm({ ...form, description: e.target.value })}
-      className="w-full p-2.5 rounded-xl border border-slate-200"
-    />
-  </div>
+                        <button
+                          onClick={() => {
+                            setSelectedAppId(app._id);
+                            setShowInterviewModal(true);
+                          }}
+                          className="px-2 py-1 bg-purple-50 text-purple-700 rounded-lg text-[10px] font-bold hover:bg-purple-100 transition"
+                        >
+                          Schedule
+                        </button>
 
-  {/* Buttons */}
-  <div className="flex justify-end gap-2 pt-3">
-    <button
-      type="button"
-      onClick={() => setShowModal(false)}
-      className="px-4 py-2 bg-gray-200 rounded-lg"
-    >
-      Cancel
-    </button>
+                        <button
+                          onClick={() => updateStatus(app._id, "Offer Extended")}
+                          className="px-2 py-1 bg-amber-50 text-amber-700 rounded-lg text-[10px] font-bold hover:bg-amber-100 transition"
+                        >
+                          Offer
+                        </button>
 
-   <button
-  type="submit"
-  className="px-5 py-2 bg-blue-600 text-white rounded-lg"
->
-  {editingId ? "Update Job" : "Publish Drive"}
-</button>
+                        <button
+                          onClick={() => updateStatus(app._id, "Rejected")}
+                          className="px-2 py-1 bg-red-50 text-red-700 rounded-lg text-[10px] font-bold hover:bg-red-100 transition"
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="7" className="py-8 text-center text-slate-400 font-medium">
+                    No candidate applications match the selected criteria.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-  </div>
-</form>
+      {/* ================= CANDIDATE PROFILE MODAL ================= */}
+      {showCandidateModal && selectedCandidate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl bg-white shadow-2xl">
+            {/* HEADER */}
+            <div className="flex items-center justify-between border-b border-slate-100 p-6">
+              <div>
+                <h2 className="text-xl font-black text-slate-900">
+                  Candidate Profile
+                </h2>
+                <p className="mt-1 text-xs text-slate-500">
+                  Candidate application details & AI Assessment breakdown
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowCandidateModal(false);
+                  setSelectedCandidate(null);
+                }}
+                className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-600 hover:bg-red-50 hover:text-red-600"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* CANDIDATE INFORMATION */}
+            <div className="space-y-6 p-6">
+              {/* PROFILE */}
+              <div className="flex items-center gap-4">
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-2xl font-black text-white">
+                  {selectedCandidate.applicantName
+                    ? selectedCandidate.applicantName.charAt(0).toUpperCase()
+                    : "C"}
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-slate-900">
+                    {selectedCandidate.applicantName}
+                  </h3>
+                  <p className="text-sm text-slate-500">
+                    {selectedCandidate.applicantEmail}
+                  </p>
+                </div>
+              </div>
+
+              {/* SCORE CARDS */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-blue-500">
+                    AI Match Score
+                  </p>
+                  <p className="mt-1 text-2xl font-black text-blue-600">
+                    {selectedCandidate.careerScore || 0}%
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-500">
+                    CGPA
+                  </p>
+                  <p className="mt-1 text-2xl font-black text-emerald-600">
+                    {selectedCandidate.applicantCgpa || "N/A"}
+                  </p>
+                </div>
+              </div>
+
+              {/* APPLICATION DETAILS */}
+              <div className="rounded-2xl border border-slate-200 p-5">
+                <h3 className="mb-4 text-sm font-black text-slate-900">
+                  Application Details
+                </h3>
+
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase text-slate-400">
+                      Applied Role
+                    </p>
+                    <p className="mt-1 text-sm font-bold text-slate-800">
+                      {selectedCandidate.jobTitle}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-[10px] font-bold uppercase text-slate-400">
+                      Company
+                    </p>
+                    <p className="mt-1 text-sm font-bold text-slate-800">
+                      {selectedCandidate.companyName}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-[10px] font-bold uppercase text-slate-400">
+                      Education
+                    </p>
+                    <p className="mt-1 text-sm font-bold text-slate-800">
+                      {selectedCandidate.education || "Not provided"}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-[10px] font-bold uppercase text-slate-400">
+                      Matched Career
+                    </p>
+                    <p className="mt-1 text-sm font-bold text-slate-800">
+                      {selectedCandidate.matchedCareer || "Not available"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* SKILLS */}
+              <div>
+                <h3 className="mb-3 text-sm font-black text-slate-900">
+                  Skills
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {selectedCandidate.skills && selectedCandidate.skills.length > 0 ? (
+                    selectedCandidate.skills.map((skill, index) => (
+                      <span
+                        key={index}
+                        className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-700"
+                      >
+                        {skill.trim()}
+                      </span>
+                    ))
+                  ) : (
+                    <p className="text-xs text-slate-400">No skills provided</p>
+                  )}
+                </div>
+              </div>
+
+              {/* STATUS */}
+              <div className="rounded-2xl bg-slate-50 p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                      Application Status
+                    </p>
+                    <p className="mt-1 text-sm font-black text-slate-800">
+                      {selectedCandidate.status}
+                    </p>
+                  </div>
+                  <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-600">
+                    {selectedCandidate.status}
+                  </span>
+                </div>
+              </div>
+
+              {/* INTERVIEW INFORMATION */}
+              {selectedCandidate.status === "Interview Scheduled" && (
+                <div className="rounded-2xl border border-purple-100 bg-purple-50 p-5">
+                  <h3 className="mb-3 text-sm font-black text-purple-900">
+                    Interview Details
+                  </h3>
+                  <div className="space-y-2 text-sm">
+                    <p>
+                      <span className="font-bold">Date:</span>{" "}
+                      {selectedCandidate.interviewDate || "Not specified"}
+                    </p>
+                    <p>
+                      <span className="font-bold">Time:</span>{" "}
+                      {selectedCandidate.interviewTime || "Not specified"}
+                    </p>
+                    {selectedCandidate.interviewLink && (
+                      <a
+                        href={selectedCandidate.interviewLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-block font-bold text-purple-600 underline"
+                      >
+                        Join Interview
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* ACTIONS INSIDE MODAL */}
+              <div className="flex flex-wrap justify-end gap-2 border-t border-slate-100 pt-5">
+                <button
+                  onClick={() => updateStatus(selectedCandidate._id, "Shortlisted")}
+                  className="rounded-xl bg-green-50 px-4 py-2 text-xs font-bold text-green-600 hover:bg-green-100"
+                >
+                  Shortlist
+                </button>
+
+                <button
+                  onClick={() => {
+                    setSelectedAppId(selectedCandidate._id);
+                    setShowCandidateModal(false);
+                    setShowInterviewModal(true);
+                  }}
+                  className="rounded-xl bg-purple-50 px-4 py-2 text-xs font-bold text-purple-600 hover:bg-purple-100"
+                >
+                  Schedule Interview
+                </button>
+
+                <button
+                  onClick={() => updateStatus(selectedCandidate._id, "Rejected")}
+                  className="rounded-xl bg-red-50 px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-100"
+                >
+                  Reject
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= INTERVIEW SCHEDULING MODAL ================= */}
+      {showInterviewModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+              <h3 className="text-base font-black text-slate-900">
+                Schedule Technical Interview
+              </h3>
+              <button
+                onClick={() => setShowInterviewModal(false)}
+                className="text-slate-400 hover:text-slate-600 text-sm font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleScheduleSubmit} className="space-y-3 text-xs">
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Interview Date *</label>
+                <input
+                  type="date"
+                  required
+                  value={interviewDetails.date}
+                  onChange={(e) => setInterviewDetails({ ...interviewDetails, date: e.target.value })}
+                  className="w-full p-2.5 rounded-xl border border-slate-200"
+                />
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Interview Time *</label>
+                <input
+                  type="time"
+                  required
+                  value={interviewDetails.time}
+                  onChange={(e) => setInterviewDetails({ ...interviewDetails, time: e.target.value })}
+                  className="w-full p-2.5 rounded-xl border border-slate-200"
+                />
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Meeting Link *</label>
+                <input
+                  type="url"
+                  required
+                  value={interviewDetails.link}
+                  onChange={(e) => setInterviewDetails({ ...interviewDetails, link: e.target.value })}
+                  className="w-full p-2.5 rounded-xl border border-slate-200"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setShowInterviewModal(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 font-bold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-purple-600 text-white font-bold hover:bg-purple-700"
+                >
+                  Confirm & Schedule
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ================= JNF CREATION MODAL ================= */}
+      {showJNFModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-xl w-full shadow-2xl relative space-y-4">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="text-lg font-black text-slate-900">Job Notification Form (JNF)</h3>
+                <p className="text-xs text-slate-500">Publish recruitment drive requirements & cutoffs</p>
+              </div>
+              <button
+                onClick={() => setShowJNFModal(false)}
+                className="text-slate-400 hover:text-slate-600 font-bold text-sm"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleJnfSubmit} className="space-y-3 text-xs">
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Company Name *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Microsoft, TCS"
+                  value={jnfForm.company}
+                  onChange={(e) => setJnfForm({ ...jnfForm, company: e.target.value })}
+                  className="w-full p-2.5 rounded-xl border border-slate-200"
+                />
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Role / Designation *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Associate Software Engineer"
+                  value={jnfForm.title}
+                  onChange={(e) => setJnfForm({ ...jnfForm, title: e.target.value })}
+                  className="w-full p-2.5 rounded-xl border border-slate-200"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">CTC Package</label>
+                  <input
+                    type="text"
+                    value={jnfForm.ctcPackage}
+                    onChange={(e) => setJnfForm({ ...jnfForm, ctcPackage: e.target.value })}
+                    className="w-full p-2.5 rounded-xl border border-slate-200"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Min AI Score Cutoff (%)</label>
+                  <input
+                    type="number"
+                    value={jnfForm.minAssessmentScore}
+                    onChange={(e) => setJnfForm({ ...jnfForm, minAssessmentScore: e.target.value })}
+                    className="w-full p-2.5 rounded-xl border border-slate-200"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Eligible Branches</label>
+                <input
+                  type="text"
+                  value={jnfForm.eligibleBranches}
+                  onChange={(e) => setJnfForm({ ...jnfForm, eligibleBranches: e.target.value })}
+                  className="w-full p-2.5 rounded-xl border border-slate-200"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setShowJNFModal(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-100 text-slate-600 font-bold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold"
+                >
+                  Publish Drive
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

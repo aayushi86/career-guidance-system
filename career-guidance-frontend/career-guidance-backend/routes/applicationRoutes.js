@@ -6,17 +6,18 @@ const mongoose = require("mongoose");
 // POST - Apply Job
 router.post("/", async (req, res) => {
   try {
-    const {
-      jobId,
-      jobTitle,
-      companyName,
-      applicantName,
-      applicantEmail,
-      education,
-      skills = [],
-      matchedCareer,
-      careerScore,
-    } = req.body;
+  const {
+  jobId,
+  jobTitle,
+  companyName,
+  applicantName,
+  applicantEmail,
+  education,
+  applicantCgpa,
+  skills = [],
+  matchedCareer,
+  careerScore,
+} = req.body;
 
     if (!jobTitle || !companyName || !applicantName || !applicantEmail) {
       return res.status(400).json({
@@ -42,18 +43,21 @@ router.post("/", async (req, res) => {
 
     const validJobId = mongoose.Types.ObjectId.isValid(jobId) ? jobId : null;
 
-    const newApplication = await Application.create({
-      jobId: validJobId,
-      jobTitle,
-      companyName,
-      applicantName,
-      applicantEmail: cleanEmail,
-      education,
-      skills,
-      matchedCareer,
-      careerScore,
-      status: "Applied",
-    });
+   const newApplication = await Application.create({
+  jobId: validJobId,
+  jobTitle,
+  companyName,
+  applicantName,
+  applicantEmail: cleanEmail,
+
+  education,
+  applicantCgpa,
+  skills,
+  matchedCareer,
+  careerScore,
+
+  status: "Applied",
+});
 
     return res.status(201).json({
       success: true,
@@ -119,9 +123,16 @@ router.get("/", async (req, res) => {
 });
 
 // UPDATE STATUS
+// UPDATE APPLICATION STATUS / INTERVIEW
 router.put("/:id", async (req, res) => {
   try {
-    const { status, interviewDate, interviewTime, interviewLink } = req.body;
+    const {
+      status,
+      interviewDate,
+      interviewTime,
+      interviewLink,
+      interviewNotes,
+    } = req.body;
 
     const updatedApp = await Application.findByIdAndUpdate(
       req.params.id,
@@ -130,18 +141,32 @@ router.put("/:id", async (req, res) => {
         interviewDate,
         interviewTime,
         interviewLink,
+        interviewNotes,
       },
-      { new: true }
+      {
+        new: true,
+        runValidators: true,
+      }
     );
 
-    res.json({
+    if (!updatedApp) {
+      return res.status(404).json({
+        success: false,
+        message: "Application not found",
+      });
+    }
+
+    return res.json({
       success: true,
       application: updatedApp,
     });
   } catch (err) {
-    res.status(500).json({
+    console.error("Update application error:", err);
+
+    return res.status(500).json({
       success: false,
       message: "Update failed",
+      error: err.message,
     });
   }
 });
