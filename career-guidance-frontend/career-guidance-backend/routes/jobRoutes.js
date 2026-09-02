@@ -1,88 +1,115 @@
 const express = require("express");
 const router = express.Router();
-
 const jobController = require("../controllers/jobController");
 const Job = require("../models/Job");
 
-// ===============================
-// JOB ROUTES
-// ===============================
-
-// Get all jobs
 router.get("/", jobController.getJobs);
-
-// Recruiter publishes JNF
 router.post("/jnf", jobController.createJNF);
-
-// Student applies for job
 router.post("/apply", jobController.applyJob);
+router.get("/my-applications", jobController.getMyApplications); // 👈 NEW
 
-// Student's applications
-router.get("/my-applications", jobController.getMyApplications);
-
-// ===============================
-// DELETE JOB
-// ===============================
-
-router.delete("/:id", async (req, res) => {
+// 🔥 NEW: JOB RECOMMENDATION BASED ON CAREER
+router.get("/recommendations", async (req, res) => {
   try {
-    const deletedJob = await Job.findByIdAndDelete(req.params.id);
+    const { career } = req.query;
 
-    if (!deletedJob) {
-      return res.status(404).json({
-        success: false,
-        message: "Job not found",
-      });
+    let jobs = [];
+
+    if (career === "Data Scientist") {
+      jobs = [
+        {
+          _id: "1",
+          title: "Junior Data Scientist",
+          company: "TCS",
+          location: "Mumbai",
+          salary: "6 LPA",
+          jobType: "Full-Time",
+          skillsRequired: ["Python", "ML", "SQL"],
+        },
+      ];
+    } 
+    
+    else if (career === "Full Stack Developer") {
+      jobs = [
+        {
+          _id: "2",
+          title: "MERN Developer",
+          company: "Infosys",
+          location: "Pune",
+          salary: "5 LPA",
+          jobType: "Full-Time",
+          skillsRequired: ["React", "Node.js", "MongoDB"],
+        },
+      ];
     }
 
-    res.json({
-      success: true,
-      message: "Job deleted successfully",
-    });
-  } catch (error) {
-    console.error("Delete job error:", error);
+    else if (career === "Cloud Engineer") {
+      jobs = [
+        {
+          _id: "3",
+          title: "Cloud Engineer",
+          company: "Wipro",
+          location: "Bangalore",
+          salary: "7 LPA",
+          jobType: "Full-Time",
+          skillsRequired: ["AWS", "Linux"],
+        },
+      ];
+    }
 
+    else if (career === "Cybersecurity Analyst") {
+      jobs = [
+        {
+          _id: "4",
+          title: "Security Analyst",
+          company: "Accenture",
+          location: "Hyderabad",
+          salary: "6 LPA",
+          jobType: "Full-Time",
+          skillsRequired: ["Networking", "Ethical Hacking"],
+        },
+      ];
+    }
+
+    return res.json({
+      success: true,
+      jobs,
+    });
+
+  } catch (error) {
+    console.log(error);
     res.status(500).json({
       success: false,
-      message: "Failed to delete job",
+      message: "Error fetching recommendations",
     });
   }
 });
 
-// ===============================
-// UPDATE JOB
-// ===============================
+//delete job
+router.delete("/:id", async (req, res) => {
+  try {
+    await Job.findByIdAndDelete(req.params.id);
 
+    res.json({ success: true });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ success: false });
+  }
+});
+
+//update job
 router.put("/:id", async (req, res) => {
   try {
     const updated = await Job.findByIdAndUpdate(
       req.params.id,
       req.body,
-      {
-        new: true,
-        runValidators: true,
-      }
+      { new: true }
     );
 
-    if (!updated) {
-      return res.status(404).json({
-        success: false,
-        message: "Job not found",
-      });
-    }
-
-    res.json({
-      success: true,
-      message: "Job updated successfully",
-      job: updated,
-    });
+    res.json({ success: true, job: updated });
   } catch (error) {
-    console.error("Update job error:", error);
-
-    res.status(500).json({
-      success: false,
-      message: "Failed to update job",
-    });
+    console.log(error);
+    res.status(500).json({ success: false });
   }
 });
 

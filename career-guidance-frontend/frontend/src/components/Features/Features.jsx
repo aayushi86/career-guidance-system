@@ -1,5 +1,8 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
+
+import { Link } from "react-router-dom";
+
 import {
   FaBrain,
   FaFileAlt,
@@ -9,6 +12,7 @@ import {
   FaBullseye,
   FaArrowRight,
 } from "react-icons/fa";
+
 import { HiSparkles } from "react-icons/hi2";
 
 import Card from "../ui/Card";
@@ -55,6 +59,7 @@ function FeatureCard({ feature }) {
       whileHover={{ y: -6 }}
       transition={{ type: "spring", stiffness: 300, damping: 20 }}
     >
+      <Link to={feature.link || "#"}>
       <Card
         onMouseMove={handleMouseMove}
         onMouseEnter={() => setIsHovered(true)}
@@ -115,6 +120,7 @@ function FeatureCard({ feature }) {
           <FaArrowRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-1.5" />
         </div>
       </Card>
+      </Link>
     </motion.div>
   );
 }
@@ -128,6 +134,7 @@ function Features() {
       icon: FaBrain,
       gradient: "from-blue-600 to-cyan-500",
       featured: true,
+      link: "/career-test",
     },
     {
       title: "Resume Analyzer",
@@ -135,6 +142,7 @@ function Features() {
         "Analyze your resume and identify key areas for improvement to increase hiring callback rates.",
       icon: FaFileAlt,
       gradient: "from-purple-600 to-pink-500",
+      link: "/resume-analyzer",
     },
     {
       title: "Skill Gap Analysis",
@@ -142,6 +150,7 @@ function Features() {
         "Discover targeted skills you need to build to qualify for your dream roles.",
       icon: FaChartLine,
       gradient: "from-emerald-600 to-teal-500",
+      route: "/skill-gap",
     },
     {
       title: "Job & Internship Matching",
@@ -149,6 +158,7 @@ function Features() {
         "Access curated listings matched directly against your profile and skill benchmarks.",
       icon: FaBriefcase,
       gradient: "from-orange-500 to-amber-500",
+      link: "/jobs",
     },
     {
       title: "AI Career Assistant",

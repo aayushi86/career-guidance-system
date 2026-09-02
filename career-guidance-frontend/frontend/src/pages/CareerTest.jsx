@@ -13,7 +13,8 @@ const availableSkills = [
 
 const availableInterests = [
   "Data", "AI", "Machine Learning", "Web Development", 
-  "Programming", "Analytics", "Business", "UI", "Design", "Database"
+  "Programming", "Analytics", "Business", "UI/UX", "Design", "Database",
+  "CyberSecurity","Cloud Computing"
 ];
 
 export default function CareerTest() {
@@ -122,6 +123,8 @@ export default function CareerTest() {
       if (!response.ok) throw new Error(data.message || "Failed to process evaluation");
 
       setResult(data.result);
+      localStorage.setItem("careerResult", JSON.stringify(data.result));
+
       setTimeout(() => {
         resultsRef.current?.scrollIntoView({ behavior: "smooth" });
       }, 150);
@@ -133,26 +136,34 @@ export default function CareerTest() {
   };
 
   const handleExploreJobs = async () => {
-    if (!result?.career) return;
-    setLoadingJobs(true);
+      const saved = JSON.parse(localStorage.getItem("careerResult"));
 
-    try {
-      const res = await fetch(
-        `http://localhost:5000/api/jobs/recommendations?career=${encodeURIComponent(result.career)}`
-      );
-      const data = await res.json();
-      if (data.success) {
-        setJobs(data.jobs);
-        setTimeout(() => {
-          jobsSectionRef.current?.scrollIntoView({ behavior: "smooth" });
-        }, 150);
+      if (!saved?.career) {
+        showToast("Please complete Career Test first", "error");
+        return;
       }
-    } catch (err) {
-      showToast("Unable to fetch job listings at this time.", "error");
-    } finally {
-      setLoadingJobs(false);
-    }
-  };
+
+      setLoadingJobs(true);
+
+      try {
+        const res = await fetch(
+          `http://localhost:5000/api/jobs/recommendations?career=${encodeURIComponent(saved.career)}`
+        );
+
+        const data = await res.json();
+
+        if (data.success) {
+          setJobs(data.jobs);
+          setTimeout(() => {
+            jobsSectionRef.current?.scrollIntoView({ behavior: "smooth" });
+          }, 150);
+        }
+      } catch (err) {
+        showToast("Unable to fetch job listings at this time.", "error");
+      } finally {
+        setLoadingJobs(false);
+      }
+    };
 
   const handleQuickApply = async (job) => {
     setApplyingId(job._id);
@@ -166,7 +177,7 @@ export default function CareerTest() {
         applicantEmail: formData.email,
         education: formData.education,
         skills: formData.skills,
-        matchedCareer: result.career,
+        matchedCareer: result.topRecommendation,
         careerScore: result.score,
       };
 
@@ -375,7 +386,7 @@ export default function CareerTest() {
                   <span className="px-3.5 py-1.5 rounded-full bg-blue-500/20 text-blue-300 text-xs font-bold uppercase tracking-wider border border-blue-400/20">
                     Highest Role Compatibility
                   </span>
-                  <h2 className="text-3xl sm:text-5xl font-black">{result.career}</h2>
+                  <h2 className="text-3xl sm:text-5xl font-black">{result.topRecommendation}</h2>
                   <p className="text-slate-300 text-sm sm:text-base max-w-xl leading-relaxed">
                     {result.reason}
                   </p>
@@ -523,7 +534,7 @@ export default function CareerTest() {
                   disabled={loadingJobs}
                   className="flex-1 py-3.5 px-6 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold shadow-lg transition disabled:opacity-60"
                 >
-                  {loadingJobs ? "Searching Database..." : `Match ${result.career} Jobs`}
+                  {loadingJobs ? "Searching Database..." : `Match ${result.topRecommendation} Jobs`}
                 </button>
               </div>
             </div>

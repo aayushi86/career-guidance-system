@@ -1,14 +1,10 @@
 const express = require("express");
 const router = express.Router();
-const resumeController = require("../controllers/resumeController");
 
-const analyzeHandler =
-  resumeController?.analyzeResume ||
-  ((req, res) => res.status(200).json({ success: true, data: { atsScore: 80 } }));
+const upload = require("../middleware/upload"); // ✅ ADD THIS
+const { analyzeResume } = require("../controllers/resumeController"); // ✅ USE DIRECT
 
-router.post("/analyze", analyzeHandler);
-router.post("/", analyzeHandler);
-router.get("/analyze", analyzeHandler);
-router.get("/", analyzeHandler);
+// ✅ ONLY THIS ROUTE NEEDED
+router.post("/analyze", upload.single("resume"), analyzeResume);
 
 module.exports = router;
