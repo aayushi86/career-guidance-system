@@ -14,6 +14,8 @@ import JobDetail from "./pages/JobDetail";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import RecruiterDashboard from "./pages/RecruiterDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
+import AICareerAssistant from "./pages/AICareerAssistant";
+import InterviewPrep from "./pages/InterviewPrep";
 
 export default function App() {
   return (
@@ -29,24 +31,13 @@ export default function App() {
           {/* ================= PUBLIC ROUTES ================= */}
 
           <Route path="/" element={<Home />} />
-
           <Route path="/career-test" element={<CareerTest />} />
-
           <Route path="/jobs" element={<Jobs />} />
-
           <Route path="/jobs/:id" element={<JobDetail />} />
-
           <Route path="/skill-gap" element={<SkillGap />} />
-
-          <Route
-            path="/resume-analyzer"
-            element={<ResumeAnalyzer />}
-          />
-
-          <Route
-            path="/contact"
-            element={<Contact />}
-          />
+          <Route path="/resume-analyzer" element={<ResumeAnalyzer />} />
+          <Route path="/contact" element={<Contact />} />
+          
 
           {/* ================= STUDENT ROUTES ================= */}
 
@@ -76,6 +67,10 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+
+          <Route path="/ai-assistant" element={<AICareerAssistant />} />
+          <Route path="/interview-prep" element={<InterviewPrep />} />
+
 
           {/* ================= RECRUITER ROUTE ================= */}
 

@@ -10,15 +10,15 @@ const MyApplications = () => {
 
   useEffect(() => {
     console.log("🔥 USE EFFECT RUNNING 🔥");
+    
     const fetchApplications = async () => {
       try {
 
         const user = JSON.parse(localStorage.getItem("user"));
-        const res = await request(`/applications/my?email=${user.email}`);
-        console.log("MY APPLICATION API:", res); // 👈 ADD THIS
-
+        const res = await request(`/jobs/my-applications?email=${user.email}`);       
+        console.log("MY APPLICATION API FULL:", JSON.stringify(res, null, 2));
         if (res.success) {
-          setApplications(res.applications);
+          setApplications(res.applications || []);
         }
       } catch (error) {
         console.log("Error fetching applications:", error);

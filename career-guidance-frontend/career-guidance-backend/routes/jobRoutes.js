@@ -223,4 +223,66 @@ router.patch("/recruiter/applications/:id", async (req, res) => {
   }
 });
 
+
+// 6. GET APPLICATIONS FOR A STUDENT (🔥 YOU WERE MISSING THIS)
+router.get("/my-applications", async (req, res) => {
+  try {
+    const { email } = req.query;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: "Email is required",
+      });
+    }
+
+    const applications = await Application.find({
+      applicantEmail: email.toLowerCase().trim(),
+    }).sort({ createdAt: -1 });
+
+    return res.status(200).json({
+      success: true,
+      applications,
+    });
+
+  } catch (err) {
+    console.error("Error fetching student applications:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+});
+
+
+// 7. GET JOB RECOMMENDATIONS BASED ON CAREER
+router.get("/recommendations", async (req, res) => {
+  try {
+    const { career } = req.query;
+
+     if (!career) {
+      return res.status(400).json({
+        success: false,
+        message: "Career is required",
+      });
+    }
+    
+    const jobs = await Job.find({
+      title: { $regex: career, $options: "i" }
+    });
+
+    return res.status(200).json({
+      success: true,
+      jobs
+    });
+
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: "Error fetching recommendations",
+      error: err.message
+    });
+  }
+});
+
 module.exports = router;

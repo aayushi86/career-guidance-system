@@ -5,7 +5,7 @@ export default function ResumeAnalyzer() {
 
   const [file, setFile] = useState(null);
   const [resumeText, setResumeText] = useState("");
-  const [result, setResult] = useState(null);
+  const [result, setResult] = useState(null); 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   
@@ -30,6 +30,7 @@ export default function ResumeAnalyzer() {
     const formData = new FormData();
     formData.append("resume", file);
     formData.append("targetRole", detectedRole);
+    formData.append("resumeText", resumeText);
 
     const res = await fetch("http://localhost:5000/api/resume/analyze", {
       method: "POST",
@@ -41,8 +42,14 @@ export default function ResumeAnalyzer() {
     console.log(data); // 👈 DEBUG
 
     if (data.success) {
-      setResult(data.analysis);        // ✅ FIXED
-      setDetectedRole(data.detectedRole); // ✅ FIXED
+      setResult(data.analysis);     
+      setDetectedRole(data.detectedRole); 
+
+      localStorage.setItem("careerResult", JSON.stringify({
+        career: data.detectedRole,
+        skills: data.analysis.missingKeywords || []
+      }));
+
     }
 
   } catch (err) {
@@ -86,6 +93,15 @@ export default function ResumeAnalyzer() {
 
           <div>
             <label className="block text-sm font-bold text-slate-700 mb-2">Paste Resume Text / Summary</label>
+            
+            {/* TEXTAREA */}
+            <textarea
+              placeholder="Paste your resume text here..."
+              value={resumeText}
+              onChange={(e) => setResumeText(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3 mb-3"
+            />
+            
             <input
               type="file"
               accept=".pdf,.doc,.docx"
@@ -126,17 +142,17 @@ export default function ResumeAnalyzer() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
               <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm">
                 <p className="text-xs font-bold text-slate-400 uppercase">Role Keywords</p>
-                <h4 className="text-2xl font-black text-slate-900 mt-1">{result?.rubricBreakdown.keywordMatchScore}%</h4>
+                <h4 className="text-2xl font-black text-slate-900 mt-1">{result?.rubricBreakdown.keywordMatchScore || 0}%</h4>
                 <p className="text-xs text-slate-500 mt-1">{result?.strongActionVerbs?.length || 0} matched keywords</p>
               </div>
               <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm">
                 <p className="text-xs font-bold text-slate-400 uppercase">Action Verbs</p>
-                <h4 className="text-2xl font-black text-slate-900 mt-1">{result?.rubricBreakdown.actionVerbDensity}%</h4>
+                <h4 className="text-2xl font-black text-slate-900 mt-1">{result?.rubricBreakdown.actionVerbDensity || 0}%</h4>
                 <p className="text-xs text-slate-500 mt-1">Impact statement score</p>
               </div>
               <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm">
                 <p className="text-xs font-bold text-slate-400 uppercase">Section Structure</p>
-                <h4 className="text-2xl font-black text-slate-900 mt-1">{result?.rubricBreakdown.parsabilityScore}%</h4>
+                <h4 className="text-2xl font-black text-slate-900 mt-1">{result?.rubricBreakdown.parsabilityScore || 0}%</h4>
                 <p className="text-xs text-slate-500 mt-1">Core sections identified</p>
               </div>
             </div>

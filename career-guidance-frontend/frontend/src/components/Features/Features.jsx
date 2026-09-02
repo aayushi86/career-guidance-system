@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-
 import { Link } from "react-router-dom";
 
 import {
@@ -150,7 +149,7 @@ function Features() {
         "Discover targeted skills you need to build to qualify for your dream roles.",
       icon: FaChartLine,
       gradient: "from-emerald-600 to-teal-500",
-      route: "/skill-gap",
+      link: "/skill-gap",
     },
     {
       title: "Job & Internship Matching",
@@ -166,6 +165,7 @@ function Features() {
         "Get real-time answers, advice, and actionable guidance for all career decisions.",
       icon: FaRobot,
       gradient: "from-indigo-600 to-violet-500",
+      link: "/ai-assistant",
     },
     {
       title: "Interview Preparation",
@@ -173,6 +173,7 @@ function Features() {
         "Practice with role-specific questions, AI feedback, and structured interview strategies.",
       icon: FaBullseye,
       gradient: "from-rose-600 to-red-500",
+      link: "/interview-prep",
     },
   ];
 

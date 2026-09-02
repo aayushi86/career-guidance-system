@@ -29,7 +29,8 @@ const recruiterRoutes = require("./routes/recruiterRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const applicationRoutes = require("./routes/applicationRoutes");
 const jobRoutes = require("./routes/jobRoutes");
-
+const assistantRoutes = require("./routes/assistantRoutes");
+const interviewRoutes = require("./routes/interviewRoutes");
 
 // ================= API ROUTES =================
 
@@ -43,20 +44,16 @@ app.use("/api/notifications", require("./routes/notificationRoutes"));
 app.use("/api/jobs", jobRoutes);
 app.use("/api", jobRoutes);
 app.use("/api/career", careerRoutes);
-
 app.use("/api/career-test", careerRoutes);
-
 app.use("/api/skills", skillRoutes);
-
 app.use("/api/resume", resumeRoutes);
-
 app.use("/api/recruiters", recruiterRoutes);
-
 app.use("/api/applications", applicationRoutes);
-
 app.use("/api/admin", adminRoutes);
-
 app.use("/api/jobs", require("./routes/jobRoutes"));
+app.use("/api/assistant", assistantRoutes);
+app.use("/api/interview", interviewRoutes);
+
 // ================= HOME =================
 
 app.get("/", (req, res) => {
