@@ -1,38 +1,88 @@
 const express = require("express");
 const router = express.Router();
+
 const jobController = require("../controllers/jobController");
 const Job = require("../models/Job");
 
-router.get("/", jobController.getJobs);
-router.post("/jnf", jobController.createJNF);
-router.post("/apply", jobController.applyJob);
-router.get("/my-applications", jobController.getMyApplications); // 👈 NEW
+// ===============================
+// JOB ROUTES
+// ===============================
 
-//delete job
+// Get all jobs
+router.get("/", jobController.getJobs);
+
+// Recruiter publishes JNF
+router.post("/jnf", jobController.createJNF);
+
+// Student applies for job
+router.post("/apply", jobController.applyJob);
+
+// Student's applications
+router.get("/my-applications", jobController.getMyApplications);
+
+// ===============================
+// DELETE JOB
+// ===============================
+
 router.delete("/:id", async (req, res) => {
   try {
-    await Job.findByIdAndDelete(req.params.id);
+    const deletedJob = await Job.findByIdAndDelete(req.params.id);
 
-    res.json({ success: true });
+    if (!deletedJob) {
+      return res.status(404).json({
+        success: false,
+        message: "Job not found",
+      });
+    }
+
+    res.json({
+      success: true,
+      message: "Job deleted successfully",
+    });
   } catch (error) {
-    console.log(error);
-    res.status(500).json({ success: false });
+    console.error("Delete job error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to delete job",
+    });
   }
 });
 
-//update job
+// ===============================
+// UPDATE JOB
+// ===============================
+
 router.put("/:id", async (req, res) => {
   try {
     const updated = await Job.findByIdAndUpdate(
       req.params.id,
       req.body,
-      { new: true }
+      {
+        new: true,
+        runValidators: true,
+      }
     );
 
-    res.json({ success: true, job: updated });
+    if (!updated) {
+      return res.status(404).json({
+        success: false,
+        message: "Job not found",
+      });
+    }
+
+    res.json({
+      success: true,
+      message: "Job updated successfully",
+      job: updated,
+    });
   } catch (error) {
-    console.log(error);
-    res.status(500).json({ success: false });
+    console.error("Update job error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to update job",
+    });
   }
 });
 

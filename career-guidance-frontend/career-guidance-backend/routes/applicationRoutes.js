@@ -131,7 +131,7 @@ router.put("/:id", async (req, res) => {
       interviewDate,
       interviewTime,
       interviewLink,
-      interviewNotes,
+      interviewNotes,  
     } = req.body;
 
     const updatedApp = await Application.findByIdAndUpdate(

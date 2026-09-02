@@ -44,9 +44,7 @@ const getStudentProfile = async (req, res) => {
       shortlistedCount: applications.filter(app => app.status === "Shortlisted").length,
     };
 
-      console.log("User Email:", userEmail);
-      console.log("Applications found:", applications.length);
-      console.log("Applications:", applications);
+  
 
     return res.status(200).json({
       success: true,

@@ -38,7 +38,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/students", studentRoutes);
 
 app.use("/api/notifications", notificationRoutes);
-
+app.use("/api/notifications", require("./routes/notificationRoutes"));
 app.use("/api/jobs", jobRoutes);
 
 app.use("/api/career", careerRoutes);
