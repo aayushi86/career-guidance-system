@@ -34,7 +34,10 @@ export default function RecruiterDashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [roleFilter, setRoleFilter] = useState("All Roles");
-  const [sortByScore, setSortByScore] = useState("none"); // "none", "high-to-low", "low-to-high"
+  const [sortByScore, setSortByScore] = useState("none");
+
+  // Base API configuration
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
   // Read stored user safely
   const user = (() => {
@@ -45,93 +48,33 @@ export default function RecruiterDashboard() {
     }
   })();
 
-  // Fetch / Seed Initial Applications
-  useEffect(() => {
-    const fetchApplications = async () => {
-      try {
-        setLoading(true);
-        const token = localStorage.getItem("token");
-        const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
-        const res = await axios.get(`${API_URL}/api/recruiter/applications`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
-        if (res.data?.applications?.length > 0) {
-          setApplications(res.data.applications);
-        } else {
-          setInitialFallbackApps();
-        }
-      } catch (err) {
-        console.warn("Using sample recruitment pool data:", err.message);
-        setInitialFallbackApps();
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Fetch Real Applications from Atlas
+  const fetchApplications = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem("token");
+      const res = await axios.get(`${API_URL}/api/recruiter/applications`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
 
+      if (res.data?.success) {
+        setApplications(res.data.applications || []);
+      } else {
+        setApplications([]);
+      }
+    } catch (err) {
+      console.error("Failed to fetch applications from MongoDB Atlas:", err.message);
+      setApplications([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchApplications();
   }, []);
 
-  const setInitialFallbackApps = () => {
-    setApplications([
-      {
-        _id: "app-101",
-        applicantName: "Aayushi Chaurasiya",
-        applicantEmail: "aayushi@example.com",
-        jobTitle: "Data Scientist",
-        companyName: "TCS Innovations",
-        education: "B.Sc IT (Final Year)",
-        matchedCareer: "Data Scientist",
-        careerScore: 88,
-        applicantCgpa: "8.8",
-        skills: ["Python", "SQL", "Machine Learning", "Pandas"],
-        status: "Applied",
-      },
-      {
-        _id: "app-102",
-        applicantName: "Rahul Verma",
-        applicantEmail: "rahul.v@example.com",
-        jobTitle: "Associate Software Engineer",
-        companyName: "Microsoft IDC",
-        education: "B.Tech CSE",
-        matchedCareer: "Full Stack Developer",
-        careerScore: 92,
-        applicantCgpa: "9.1",
-        skills: ["React", "Node.js", "MongoDB", "System Design"],
-        status: "Shortlisted",
-      },
-      {
-        _id: "app-103",
-        applicantName: "Pooja Patel",
-        applicantEmail: "pooja.p@example.com",
-        jobTitle: "Cloud Solutions Engineer",
-        companyName: "Amazon Web Services",
-        education: "MCA",
-        matchedCareer: "Cloud Engineer",
-        careerScore: 78,
-        applicantCgpa: "7.9",
-        skills: ["AWS", "Docker", "Linux", "Python"],
-        status: "Interview Scheduled",
-        interviewDate: "2026-09-05",
-        interviewTime: "11:00 AM IST",
-        interviewLink: "https://meet.google.com/cloud-interview-103",
-      },
-      {
-        _id: "app-104",
-        applicantName: "Rohan Nair",
-        applicantEmail: "rohan.n@example.com",
-        jobTitle: "Associate Software Engineer",
-        companyName: "Microsoft IDC",
-        education: "B.Sc CS",
-        matchedCareer: "Backend Developer",
-        careerScore: 68,
-        applicantCgpa: "7.2",
-        skills: ["Java", "Spring Boot", "MySQL"],
-        status: "Rejected",
-      },
-    ]);
-  };
-
-  // Status Updater
+  // Status Updater with Backend Sync
   const updateStatus = async (appId, newStatus, extraData = {}) => {
     setApplications((prev) =>
       prev.map((app) =>
@@ -145,38 +88,59 @@ export default function RecruiterDashboard() {
 
     try {
       const token = localStorage.getItem("token");
-      const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
       await axios.patch(
         `${API_URL}/api/recruiter/applications/${appId}`,
         { status: newStatus, ...extraData },
         { headers: token ? { Authorization: `Bearer ${token}` } : {} }
       );
     } catch (err) {
-      console.warn("Status updated locally:", err.message);
+      console.error("Failed to update status on server:", err.message);
     }
   };
 
-  // Schedule Interview Submit
-  const handleScheduleSubmit = (e) => {
+  // Schedule Interview Submit (Atlas synced)
+  const handleScheduleSubmit = async (e) => {
     e.preventDefault();
     if (!selectedAppId) return;
 
-    updateStatus(selectedAppId, "Interview Scheduled", {
+    await updateStatus(selectedAppId, "Interview Scheduled", {
       interviewDate: interviewDetails.date,
       interviewTime: interviewDetails.time,
       interviewLink: interviewDetails.link,
     });
 
-    alert("📅 Interview invitation scheduled and dispatched to candidate!");
+    alert("📅 Interview saved to Atlas and notification sent to student!");
     setShowInterviewModal(false);
     setSelectedAppId(null);
   };
 
-  // JNF Form Submit
-  const handleJnfSubmit = (e) => {
+  // JNF Form Submit (Saves to MongoDB Atlas & Broadcasts)
+  const handleJnfSubmit = async (e) => {
     e.preventDefault();
-    alert("✅ Job Notification Form (JNF) published for campus drives!");
-    setShowJNFModal(false);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.post(`${API_URL}/api/jobs`, jnfForm, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+
+      if (res.data?.success) {
+        alert("✅ JNF drive successfully created in MongoDB Atlas and broadcast to students!");
+        setShowJNFModal(false);
+        setJnfForm({
+          company: "",
+          title: "",
+          ctcPackage: "12-16 LPA",
+          minAssessmentScore: 75,
+          minCgpa: 7.0,
+          eligibleBranches: "B.Sc IT, B.Tech CSE, MCA",
+          requiredSkills: "Python, SQL, React",
+          description: "",
+        });
+      }
+    } catch (err) {
+      console.error("JNF Submission Error:", err);
+      alert(`❌ Failed to publish JNF: ${err.response?.data?.message || err.message}`);
+    }
   };
 
   // Dynamic unique roles for dropdown
@@ -253,7 +217,6 @@ export default function RecruiterDashboard() {
       {/* Search & Filter Controls */}
       <div className="bg-white border border-slate-200/90 rounded-3xl p-6 shadow-sm space-y-4">
         <div className="flex flex-col lg:flex-row gap-4 justify-between items-stretch lg:items-center">
-          
           {/* Search Bar */}
           <div className="relative flex-1">
             <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm">🔍</span>
@@ -314,7 +277,7 @@ export default function RecruiterDashboard() {
           <div>
             <h2 className="text-base font-bold text-slate-900">Student Applications</h2>
             <p className="text-xs text-slate-500">
-              Showing {filteredApplications.length} candidate(s)
+              {loading ? "Connecting to Atlas..." : `Showing ${filteredApplications.length} candidate(s)`}
             </p>
           </div>
         </div>
@@ -388,7 +351,6 @@ export default function RecruiterDashboard() {
 
                     <td className="py-3.5 px-4 text-right">
                       <div className="flex gap-1.5 justify-end">
-                        {/* VIEW CANDIDATE PROFILE BUTTON */}
                         <button
                           onClick={() => {
                             setSelectedCandidate(app);
@@ -436,7 +398,7 @@ export default function RecruiterDashboard() {
               ) : (
                 <tr>
                   <td colSpan="7" className="py-8 text-center text-slate-400 font-medium">
-                    No candidate applications match the selected criteria.
+                    {loading ? "Loading candidate pool..." : "No candidate applications match the selected criteria."}
                   </td>
                 </tr>
               )}
@@ -449,7 +411,6 @@ export default function RecruiterDashboard() {
       {showCandidateModal && selectedCandidate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl bg-white shadow-2xl">
-            {/* HEADER */}
             <div className="flex items-center justify-between border-b border-slate-100 p-6">
               <div>
                 <h2 className="text-xl font-black text-slate-900">
@@ -470,9 +431,7 @@ export default function RecruiterDashboard() {
               </button>
             </div>
 
-            {/* CANDIDATE INFORMATION */}
             <div className="space-y-6 p-6">
-              {/* PROFILE */}
               <div className="flex items-center gap-4">
                 <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-2xl font-black text-white">
                   {selectedCandidate.applicantName
@@ -489,7 +448,6 @@ export default function RecruiterDashboard() {
                 </div>
               </div>
 
-              {/* SCORE CARDS */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-blue-500">
@@ -510,7 +468,6 @@ export default function RecruiterDashboard() {
                 </div>
               </div>
 
-              {/* APPLICATION DETAILS */}
               <div className="rounded-2xl border border-slate-200 p-5">
                 <h3 className="mb-4 text-sm font-black text-slate-900">
                   Application Details
@@ -555,7 +512,6 @@ export default function RecruiterDashboard() {
                 </div>
               </div>
 
-              {/* SKILLS */}
               <div>
                 <h3 className="mb-3 text-sm font-black text-slate-900">
                   Skills
@@ -576,7 +532,6 @@ export default function RecruiterDashboard() {
                 </div>
               </div>
 
-              {/* STATUS */}
               <div className="rounded-2xl bg-slate-50 p-4">
                 <div className="flex items-center justify-between">
                   <div>
@@ -593,7 +548,6 @@ export default function RecruiterDashboard() {
                 </div>
               </div>
 
-              {/* INTERVIEW INFORMATION */}
               {selectedCandidate.status === "Interview Scheduled" && (
                 <div className="rounded-2xl border border-purple-100 bg-purple-50 p-5">
                   <h3 className="mb-3 text-sm font-black text-purple-900">
@@ -622,7 +576,6 @@ export default function RecruiterDashboard() {
                 </div>
               )}
 
-              {/* ACTIONS INSIDE MODAL */}
               <div className="flex flex-wrap justify-end gap-2 border-t border-slate-100 pt-5">
                 <button
                   onClick={() => updateStatus(selectedCandidate._id, "Shortlisted")}
