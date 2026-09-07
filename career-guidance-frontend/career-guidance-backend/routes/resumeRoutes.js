@@ -1,10 +1,15 @@
 const express = require("express");
 const router = express.Router();
+const multer = require("multer");
+const { analyzeResume } = require("../controllers/resumeController");
 
-const upload = require("../middleware/upload"); // ✅ ADD THIS
-const { analyzeResume } = require("../controllers/resumeController"); // ✅ USE DIRECT
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+});
 
-// ✅ ONLY THIS ROUTE NEEDED
+// Support both /analyze and /grade endpoints
 router.post("/analyze", upload.single("resume"), analyzeResume);
+router.post("/grade", upload.single("resume"), analyzeResume);
 
 module.exports = router;

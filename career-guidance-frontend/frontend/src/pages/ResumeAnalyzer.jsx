@@ -1,191 +1,219 @@
 import { useState } from "react";
-import { resumeApi } from "../services/resumeApi";
+import axios from "axios";
+import Card from "../components/ui/Card";
+import Button from "../components/ui/Button";
+import { FaFileUpload, FaCheckCircle, FaExclamationTriangle } from "react-icons/fa";
+
+const ROLES = [
+  "Software Engineer",
+  "Full Stack Developer",
+  "Data Scientist",
+  "Cloud / DevOps Engineer",
+];
 
 export default function ResumeAnalyzer() {
-
-  const [file, setFile] = useState(null);
-  const [resumeText, setResumeText] = useState("");
-  const [result, setResult] = useState(null); 
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [targetRole, setTargetRole] = useState("Software Engineer");
   const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState(null);
   const [error, setError] = useState("");
-  
-  const saved = JSON.parse(localStorage.getItem("careerResult"));
 
-  const [detectedRole, setDetectedRole] = useState(
-    saved?.career || "Not detected"
-  );
-
-  const handleAnalyze = async (e) => {
-  e.preventDefault();
-
-  if (!file) {
-    setError("Please upload a resume file");
-    return;
-  }
-
-  setLoading(true);
-  setError("");
-
-  try {
-    const formData = new FormData();
-    formData.append("resume", file);
-    formData.append("targetRole", detectedRole);
-    formData.append("resumeText", resumeText);
-
-    const res = await fetch("http://localhost:5000/api/resume/analyze", {
-      method: "POST",
-      body: formData,
-    });
-
-    const data = await res.json();
-
-    console.log(data); // 👈 DEBUG
-
-    if (data.success) {
-      setResult(data.analysis);     
-      setDetectedRole(data.detectedRole); 
-
-      localStorage.setItem("careerResult", JSON.stringify({
-        career: data.detectedRole,
-        skills: data.analysis.missingKeywords || []
-      }));
-
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file && file.type !== "application/pdf") {
+      setError("Please select a valid PDF file.");
+      setSelectedFile(null);
+      return;
     }
 
-  } catch (err) {
-    console.error(err);
-    setError("Failed to analyze resume");
-  } finally {
-    setLoading(false);
+    if (file && file.size > 5 * 1024 * 1024) {
+      setError("File size exceeds 5MB limit.");
+      setSelectedFile(null);
+      return;
+    }
+
+    setError("");
+    setSelectedFile(file);
+  };
+
+  const handleAnalyze = async (e) => {
+    e.preventDefault();
+
+    if (!selectedFile) {
+      setError("Please upload your PDF resume.");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+    setResult(null);
+
+    // Build standard multipart FormData
+    const formData = new FormData();
+    formData.append("resume", selectedFile);
+    formData.append("targetRole", targetRole);
+
+    try {
+      const token = localStorage.getItem("token");
+      const config = token
+        ? { headers: { Authorization: `Bearer ${token}` } }
+        : {};
+
+      // Notice: No "Content-Type": "multipart/form-data" header.
+      // Axios and the browser will automatically compute the multipart boundary.
+     const response = await axios.post(
+  "http://localhost:5000/api/resumes/analyze",
+  formData,
+  {
+    headers: {
+      "Content-Type": "multipart/form-data",
+      Authorization: `Bearer ${localStorage.getItem("token")}`,
+    },
   }
-};
+);
+      if (response.data?.success) {
+        setResult(response.data.data || response.data.analysis);
+      } else {
+        throw new Error(response.data?.message || "Failed to analyze resume.");
+      }
+    } catch (err) {
+      console.error("Resume analysis error:", err.response || err);
+      setError(
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        err.message ||
+        "Failed to analyze resume. Check your connection or session."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-slate-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-5xl mx-auto space-y-8">
-        
-        {/* Header */}
-        <div className="text-center max-w-2xl mx-auto space-y-3">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-purple-50 border border-purple-200 text-purple-700 text-xs font-bold uppercase tracking-wider">
-            📄 AI Resume ATS Grader
-          </div>
-          <h1 className="text-4xl font-black text-slate-900 tracking-tight">
-            Optimize Your Resume for Campus Recruiters
-          </h1>
-          <p className="text-slate-500 text-sm">
-            Paste your resume text to evaluate keyword density, impact verbs, and ATS compatibility.
+    <div className="min-h-screen bg-slate-50 py-12 px-4 sm:px-8">
+      <div className="max-w-3xl mx-auto space-y-6">
+        <div>
+          <h1 className="text-3xl font-black text-slate-800">ATS Resume Analyzer</h1>
+          <p className="text-sm text-slate-600 mt-1">
+            Evaluate your PDF resume against core competencies for placement drives.
           </p>
         </div>
 
-        {/* Input Form */}
-        <form onSubmit={handleAnalyze} className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-sm space-y-5">
-          <div>
-            <label className="block text-sm font-bold text-slate-700 mb-2">
-              Detected Job Role
-            </label>
-
-            <div className="w-full bg-slate-100 border border-slate-200 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-800">
-              {detectedRole === "Not detected"
-              ? "⚠️ Please complete Career Test first"
-              : detectedRole}
-            </div>
+        {error && (
+          <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-xs font-semibold text-red-700">
+            {error}
           </div>
+        )}
 
-          <div>
-            <label className="block text-sm font-bold text-slate-700 mb-2">Paste Resume Text / Summary</label>
-            
-            {/* TEXTAREA */}
-            <textarea
-              placeholder="Paste your resume text here..."
-              value={resumeText}
-              onChange={(e) => setResumeText(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3 mb-3"
-            />
-            
-            <input
-              type="file"
-              accept=".pdf,.doc,.docx"
-              onChange={(e) => setFile(e.target.files[0])}
-              className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3"
-            />
-          </div>
-
-          {error && <div className="p-4 bg-red-50 text-red-700 rounded-2xl text-xs font-semibold">{error}</div>}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold rounded-2xl text-sm shadow-md shadow-purple-500/20 transition disabled:opacity-50"
-          >
-            {loading ? "Grading Resume Content..." : "Grade Resume with AI 🚀"}
-          </button>
-        </form>
-
-        {/* Results Card */}
-        {result && (
-          <div className="space-y-6">
-            
-            {/* Score Banner */}
-            <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-6">
-              <div>
-                <span className="text-xs font-bold text-purple-600 uppercase tracking-wider">ATS Score Report</span>
-                <h3 className="text-2xl font-black text-slate-900 mt-1">Role Match: {result?.targetRole || detectedRole}</h3>
-                <p className="text-slate-500 text-sm mt-1">Based on keyword matching and industry ATS parsing metrics.</p>
-              </div>
-              <div className="flex flex-col items-center justify-center p-5 bg-purple-50 border border-purple-100 rounded-2xl min-w-[140px]">
-                <span className="text-4xl font-black text-purple-700">{result?.atsScore}/100</span>
-                <span className="text-[10px] font-bold text-purple-800 uppercase tracking-widest mt-0.5">ATS Match</span>
-              </div>
-            </div>
-
-            {/* Metrics Breakdown */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-              <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm">
-                <p className="text-xs font-bold text-slate-400 uppercase">Role Keywords</p>
-                <h4 className="text-2xl font-black text-slate-900 mt-1">{result?.rubricBreakdown.keywordMatchScore || 0}%</h4>
-                <p className="text-xs text-slate-500 mt-1">{result?.strongActionVerbs?.length || 0} matched keywords</p>
-              </div>
-              <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm">
-                <p className="text-xs font-bold text-slate-400 uppercase">Action Verbs</p>
-                <h4 className="text-2xl font-black text-slate-900 mt-1">{result?.rubricBreakdown.actionVerbDensity || 0}%</h4>
-                <p className="text-xs text-slate-500 mt-1">Impact statement score</p>
-              </div>
-              <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-sm">
-                <p className="text-xs font-bold text-slate-400 uppercase">Section Structure</p>
-                <h4 className="text-2xl font-black text-slate-900 mt-1">{result?.rubricBreakdown.parsabilityScore || 0}%</h4>
-                <p className="text-xs text-slate-500 mt-1">Core sections identified</p>
-              </div>
-            </div>
-
-            {/* Suggestions & Keywords */}
-            <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-sm space-y-4">
-              <h4 className="text-lg font-black text-slate-900">AI Feedback & Improvements</h4>
-              <ul className="space-y-2">
-                {result?.bulletPointImprovements?.map((s, idx) => (
-                  <li key={idx} className="p-3.5 bg-slate-50 rounded-2xl text-xs font-semibold text-slate-700 flex items-start gap-2.5">
-                    <span className="text-purple-600 font-bold">💡</span>
-                    <span>{s}</span>
-                  </li>
+        <Card className="p-6">
+          <form onSubmit={handleAnalyze} className="space-y-5">
+            <div>
+              <label className="block text-xs font-bold text-slate-600 uppercase mb-2">
+                Target Role
+              </label>
+              <select
+                value={targetRole}
+                onChange={(e) => setTargetRole(e.target.value)}
+                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-600"
+              >
+                {ROLES.map((role) => (
+                  <option key={role} value={role}>
+                    {role}
+                  </option>
                 ))}
-              </ul>
+              </select>
+            </div>
 
-              {result?.missingKeywords?.length > 0 && (
-                <div className="pt-2">
-                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Recommended Keywords to Include</p>
-                  <div className="flex flex-wrap gap-2">
-                    {result?.missingKeywords?.map((kw) => (
-                      <span key={kw} className="px-3 py-1 bg-purple-50 text-purple-700 text-xs font-bold rounded-xl border border-purple-100">
-                        + {kw}
-                      </span>
-                    ))}
-                  </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-600 uppercase mb-2">
+                Upload Resume (PDF)
+              </label>
+              <div className="border-2 border-dashed border-slate-200 rounded-2xl p-6 text-center bg-slate-50 hover:bg-slate-100 transition">
+                <input
+                  type="file"
+                  id="resumeUpload"
+                  accept=".pdf,application/pdf"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+                <label htmlFor="resumeUpload" className="cursor-pointer flex flex-col items-center">
+                  <FaFileUpload className="text-3xl text-blue-600 mb-2" />
+                  <span className="text-sm font-bold text-slate-700">
+                    {selectedFile ? selectedFile.name : "Click to select your PDF resume"}
+                  </span>
+                  <span className="text-xs text-slate-400 mt-1">
+                    {selectedFile
+                      ? `${(selectedFile.size / 1024 / 1024).toFixed(2)} MB`
+                      : "Maximum size: 5MB"}
+                  </span>
+                </label>
+              </div>
+            </div>
+
+            <Button type="submit" disabled={loading} className="w-full py-3 font-bold">
+              {loading ? "Parsing & Scoring Resume..." : "Run ATS Analysis"}
+            </Button>
+          </form>
+        </Card>
+
+        {result && (
+          <Card className="p-6 space-y-6">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              <div>
+                <span className="text-xs font-bold text-slate-400 uppercase">ATS Compatibility</span>
+                <div className="text-4xl font-black text-blue-600 mt-1">
+                  {result.score ?? result.atsScore ?? 0}%
+                </div>
+              </div>
+              <div className="text-right">
+                <span className="text-xs font-bold text-slate-400 uppercase">Target</span>
+                <div className="text-sm font-bold text-slate-700 mt-1">
+                  {result.targetRole || targetRole}
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-xs font-bold text-slate-600 uppercase mb-2 flex items-center gap-1.5">
+                <FaCheckCircle className="text-emerald-500" /> Matched Keywords
+              </h3>
+              {(!result.matchedSkills || result.matchedSkills.length === 0) ? (
+                <p className="text-xs text-slate-400 italic">No direct matches found.</p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {result.matchedSkills.map((item, idx) => (
+                    <span
+                      key={idx}
+                      className="px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-bold uppercase"
+                    >
+                      {item}
+                    </span>
+                  ))}
                 </div>
               )}
             </div>
 
-          </div>
+            <div>
+              <h3 className="text-xs font-bold text-slate-600 uppercase mb-2 flex items-center gap-1.5">
+                <FaExclamationTriangle className="text-amber-500" /> Missing Recommended Keywords
+              </h3>
+              {(!result.missingSkills || result.missingSkills.length === 0) ? (
+                <p className="text-xs text-emerald-600 font-bold">All core keywords present!</p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {result.missingSkills.map((item, idx) => (
+                    <span
+                      key={idx}
+                      className="px-3 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-lg text-xs font-bold uppercase"
+                    >
+                      {item}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </Card>
         )}
-
       </div>
     </div>
   );

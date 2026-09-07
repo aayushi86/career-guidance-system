@@ -1,67 +1,131 @@
+require("dotenv").config();
+
 const express = require("express");
 const cors = require("cors");
-const dotenv = require("dotenv");
+
 const connectDB = require("./config/db");
+const resumeRoutes = require("./routes/resumeRoutes");
 
-dotenv.config();
-
-connectDB();
 
 const app = express();
 
 
-// ================= MIDDLEWARE =================
+// ==========================================
+// DATABASE
+// ==========================================
 
-app.use(cors());
+connectDB();
+
+
+// ==========================================
+// MIDDLEWARE
+// ==========================================
+
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    credentials: true,
+  })
+);
 
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 
-// ================= ROUTES =================
+// ==========================================
+// ROUTES
+// ==========================================
 
-const authRoutes = require("./routes/authRoutes");
-const studentRoutes = require("./routes/studentRoutes");
-const notificationRoutes = require("./routes/notificationRoutes");
-const careerRoutes = require("./routes/careerRoutes");
-const skillRoutes = require("./routes/skillRoutes");
-const resumeRoutes = require("./routes/resumeRoutes");
-const recruiterRoutes = require("./routes/recruiterRoutes");
-const adminRoutes = require("./routes/adminRoutes");
-const applicationRoutes = require("./routes/applicationRoutes");
-const jobRoutes = require("./routes/jobRoutes");
-const assistantRoutes = require("./routes/assistantRoutes");
-const interviewRoutes = require("./routes/interviewRoutes");
+// Authentication
+app.use(
+  "/api/auth",
+  require("./routes/authRoutes")
+);
 
-// ================= API ROUTES =================
+// Students
+app.use(
+  "/api/students",
+  require("./routes/studentRoutes")
+);
 
-app.use("/api/auth", authRoutes);
+// Jobs
+app.use(
+  "/api/jobs",
+  require("./routes/jobRoutes")
+);
 
-app.use("/api/students", studentRoutes);
+// Applications
+app.use(
+  "/api/applications",
+  require("./routes/applicationRoutes")
+);
 
-app.use("/api/notifications", notificationRoutes);
-app.use("/api/notifications", require("./routes/notificationRoutes"));
-// Mount jobRoutes for both prefixes so both /api/jobs and /api/recruiter/applications work:
-app.use("/api/jobs", jobRoutes);
-app.use("/api", jobRoutes);
-app.use("/api/career", careerRoutes);
-app.use("/api/career-test", careerRoutes);
-app.use("/api/skills", skillRoutes);
+// Resume
+
+app.use("/api/resumes", resumeRoutes);
 app.use("/api/resume", resumeRoutes);
-app.use("/api/recruiters", recruiterRoutes);
-app.use("/api/applications", applicationRoutes);
-app.use("/api/admin", adminRoutes);
-app.use("/api/jobs", require("./routes/jobRoutes"));
-app.use("/api/assistant", assistantRoutes);
-app.use("/api/interview", interviewRoutes);
+// Career Test
+app.use("/api/career-test", require("./routes/careerRoutes"));
+app.use("/api/assessment", require("./routes/careerRoutes"));
 
-// ================= HOME =================
 
-app.get("/", (req, res) => {
-  res.send("CareerAI API is running...");
+// Assessment
+app.use("/api/assessment", require("./routes/careerRoutes"));
+
+// Recruiter
+app.use(
+  "/api/recruiter",
+  require("./routes/recruiterRoutes")
+);
+
+// Admin
+app.use(
+  "/api/admin",
+  require("./routes/adminRoutes")
+);
+
+
+// ==========================================
+// HEALTH CHECK
+// ==========================================
+
+app.get("/api/health", (req, res) => {
+  res.json({
+    success: true,
+    message: "CareerAI backend is running",
+  });
 });
 
 
-// ================= SERVER =================
+// ==========================================
+// 404
+// ==========================================
+
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: `Route ${req.originalUrl} not found`,
+  });
+});
+
+
+// ==========================================
+// GLOBAL ERROR HANDLER
+// ==========================================
+
+app.use((err, req, res, next) => {
+  console.error("Internal Server Error:", err.stack);
+
+  res.status(500).json({
+    success: false,
+    message: err.message || "Internal Server Error",
+  });
+});
+
+
+// ==========================================
+// SERVER
+// ==========================================
 
 const PORT = process.env.PORT || 5000;
 
