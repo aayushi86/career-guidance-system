@@ -5,25 +5,21 @@ const cors = require("cors");
 
 const connectDB = require("./config/db");
 const resumeRoutes = require("./routes/resumeRoutes");
-
+const careerRoutes = require("./routes/careerRoutes");
 
 const app = express();
 
-
 // ==========================================
-// DATABASE
+// DATABASE (Handles resilient connection)
 // ==========================================
-
 connectDB();
-
 
 // ==========================================
 // MIDDLEWARE
 // ==========================================
-
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: ["http://localhost:5173", "http://localhost:3000"],
     credentials: true,
   })
 );
@@ -31,64 +27,42 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-
 // ==========================================
 // ROUTES
 // ==========================================
 
 // Authentication
-app.use(
-  "/api/auth",
-  require("./routes/authRoutes")
-);
+app.use("/api/auth", require("./routes/authRoutes"));
 
-// Students
-app.use(
-  "/api/students",
-  require("./routes/studentRoutes")
-);
+// Students & Profile
+app.use("/api/students", require("./routes/studentRoutes"));
 
 // Jobs
-app.use(
-  "/api/jobs",
-  require("./routes/jobRoutes")
-);
+app.use("/api/jobs", require("./routes/jobRoutes"));
 
 // Applications
-app.use(
-  "/api/applications",
-  require("./routes/applicationRoutes")
-);
+app.use("/api/applications", require("./routes/applicationRoutes"));
 
-// Resume
+// Notifications
+app.use("/api/notifications", require("./routes/notificationRoutes"));
 
+// Resume (dual-mounted for singular/plural support)
 app.use("/api/resumes", resumeRoutes);
 app.use("/api/resume", resumeRoutes);
-// Career Test
-app.use("/api/career-test", require("./routes/careerRoutes"));
-app.use("/api/assessment", require("./routes/careerRoutes"));
 
-
-// Assessment
-app.use("/api/assessment", require("./routes/careerRoutes"));
+// Career Test & Assessment (dual-mounted for backwards compatibility)
+app.use("/api/career-test", careerRoutes);
+app.use("/api/assessment", careerRoutes);
 
 // Recruiter
-app.use(
-  "/api/recruiter",
-  require("./routes/recruiterRoutes")
-);
 
+app.use("/api/recruiter", require("./routes/recruiterRoutes"));
 // Admin
-app.use(
-  "/api/admin",
-  require("./routes/adminRoutes")
-);
-
+app.use("/api/admin", require("./routes/adminRoutes"));
 
 // ==========================================
 // HEALTH CHECK
 // ==========================================
-
 app.get("/api/health", (req, res) => {
   res.json({
     success: true,
@@ -96,11 +70,9 @@ app.get("/api/health", (req, res) => {
   });
 });
 
-
 // ==========================================
-// 404
+// 404 CATCH-ALL
 // ==========================================
-
 app.use((req, res) => {
   res.status(404).json({
     success: false,
@@ -108,11 +80,9 @@ app.use((req, res) => {
   });
 });
 
-
 // ==========================================
 // GLOBAL ERROR HANDLER
 // ==========================================
-
 app.use((err, req, res, next) => {
   console.error("Internal Server Error:", err.stack);
 
@@ -122,15 +92,11 @@ app.use((err, req, res, next) => {
   });
 });
 
-
 // ==========================================
-// SERVER
+// SERVER INITIALIZATION
 // ==========================================
-
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-  console.log(
-    `🚀 CareerAI server running on http://localhost:${PORT}`
-  );
+  console.log(`🚀 CareerAI server running on http://localhost:${PORT}`);
 });
