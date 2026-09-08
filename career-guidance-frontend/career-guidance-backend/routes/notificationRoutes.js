@@ -3,12 +3,22 @@ const express = require("express");
 const router = express.Router();
 
 const {
-  getNotificationsByEmail,
+  getNotificationsForUser,
   markNotificationRead,
 } = require("../controllers/notificationController");
 
-router.get("/:email", getNotificationsByEmail);
+const { protect } = require("../middleware/authMiddleware");
 
-router.patch("/:id/read", markNotificationRead);
+// ==========================================
+// GET LOGGED-IN USER NOTIFICATIONS
+// GET /api/notifications
+// ==========================================
+router.get("/", protect, getNotificationsForUser);
+
+// ==========================================
+// MARK NOTIFICATION AS READ
+// PATCH /api/notifications/:id/read
+// ==========================================
+router.patch("/:id/read", protect, markNotificationRead);
 
 module.exports = router;

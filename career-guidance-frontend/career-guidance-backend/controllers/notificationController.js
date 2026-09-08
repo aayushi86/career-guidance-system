@@ -1,22 +1,41 @@
 const Notification = require("../models/Notification");
+const User = require("../models/User");
 
-// GET /api/notifications/:email
-const getNotificationsByEmail = async (req, res) => {
+// ==========================================
+// GET LOGGED-IN USER NOTIFICATIONS
+// GET /api/notifications
+// ==========================================
+const getNotificationsForUser = async (req, res) => {
   try {
-    const { email } = req.params;
+    let email = req.user?.email;
 
-    if (!email) {
-      return res.status(400).json({ success: false, message: "Email is required" });
+    // Fallback: If JWT payload only stored an ID, fetch the user's email from MongoDB
+    if (!email && (req.user?._id || req.user?.id)) {
+      const userId = req.user._id || req.user.id;
+      const user = await User.findById(userId).select("email");
+      if (user) {
+        email = user.email;
+      }
     }
 
+    if (!email) {
+      return res.status(401).json({
+        success: false,
+        message: "User email not available.",
+      });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+
     const notifications = await Notification.find({
-      recipientEmail: email.toLowerCase().trim(),
+      recipientEmail: normalizedEmail,
     })
       .sort({ createdAt: -1 })
-      .limit(15);
+      .limit(30)
+      .lean();
 
     const unreadCount = await Notification.countDocuments({
-      recipientEmail: email.toLowerCase().trim(),
+      recipientEmail: normalizedEmail,
       isRead: false,
     });
 
@@ -26,25 +45,75 @@ const getNotificationsByEmail = async (req, res) => {
       unreadCount,
     });
   } catch (error) {
+    console.error("Notification fetch error:", error);
+
     return res.status(500).json({
       success: false,
-      message: "Failed to fetch notifications",
-      error: error.message,
+      message: "Failed to fetch notifications.",
     });
   }
 };
 
+// ==========================================
+// MARK ONE NOTIFICATION AS READ
 // PATCH /api/notifications/:id/read
+// ==========================================
 const markNotificationRead = async (req, res) => {
   try {
-    await Notification.findByIdAndUpdate(req.params.id, { isRead: true });
-    return res.status(200).json({ success: true, message: "Notification marked as read" });
+    let email = req.user?.email;
+
+    if (!email && (req.user?._id || req.user?.id)) {
+      const userId = req.user._id || req.user.id;
+      const user = await User.findById(userId).select("email");
+      if (user) {
+        email = user.email;
+      }
+    }
+
+    if (!email) {
+      return res.status(401).json({
+        success: false,
+        message: "User email not available.",
+      });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+
+    const notification = await Notification.findOneAndUpdate(
+      {
+        _id: req.params.id,
+        recipientEmail: normalizedEmail,
+      },
+      {
+        isRead: true,
+      },
+      {
+        new: true,
+      }
+    );
+
+    if (!notification) {
+      return res.status(404).json({
+        success: false,
+        message: "Notification not found.",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      notification,
+    });
   } catch (error) {
-    return res.status(500).json({ success: false, message: "Error updating notification" });
+    console.error("Mark notification read error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to update notification.",
+    });
   }
 };
 
 module.exports = {
-  getNotificationsByEmail,
+  getNotificationsForUser,
   markNotificationRead,
 };

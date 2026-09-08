@@ -27,70 +27,91 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+
+
 // ==========================================
 // ROUTES
 // ==========================================
 
 // Authentication
-app.use("/api/auth", require("./routes/authRoutes"));
+app.use(
+  "/api/auth",
+  require("./routes/authRoutes")
+);
 
-// Students & Profile
-app.use("/api/students", require("./routes/studentRoutes"));
+// Students
+app.use(
+  "/api/students",
+  require("./routes/studentRoutes")
+);
 
 // Jobs
-app.use("/api/jobs", require("./routes/jobRoutes"));
+app.use(
+  "/api/jobs",
+  require("./routes/jobRoutes")
+);
 
 // Applications
-app.use("/api/applications", require("./routes/applicationRoutes"));
+app.use(
+  "/api/applications",
+  require("./routes/applicationRoutes")
+);
+
+// Resume
+app.use(
+  "/api/resumes",
+  resumeRoutes
+);
+
+// Compatibility alias
+app.use(
+  "/api/resume",
+  resumeRoutes
+);
+
+// Career Test
+app.use(
+  "/api/career-test",
+  require("./routes/careerRoutes")
+);
+
+// Compatibility alias
+app.use(
+  "/api/assessment",
+  require("./routes/careerRoutes")
+);
+
+// Skills
+app.use(
+  "/api/skills",
+  require("./routes/skillRoutes")
+);
 
 // Notifications
-app.use("/api/notifications", require("./routes/notificationRoutes"));
-
-// Resume (dual-mounted for singular/plural support)
-app.use("/api/resumes", resumeRoutes);
-app.use("/api/resume", resumeRoutes);
-
-// Career Test & Assessment (dual-mounted for backwards compatibility)
-app.use("/api/career-test", careerRoutes);
-app.use("/api/assessment", careerRoutes);
+app.use(
+  "/api/notifications",
+  require("./routes/notificationRoutes")
+);
 
 // Recruiter
+app.use(
+  "/api/recruiter",
+  require("./routes/recruiterRoutes")
+);
 
-app.use("/api/recruiter", require("./routes/recruiterRoutes"));
 // Admin
-app.use("/api/admin", require("./routes/adminRoutes"));
+app.use(
+  "/api/admin",
+  require("./routes/adminRoutes")
+);
 
-// ==========================================
-// HEALTH CHECK
-// ==========================================
-app.get("/api/health", (req, res) => {
-  res.json({
-    success: true,
-    message: "CareerAI backend is running",
-  });
-});
-
-// ==========================================
-// 404 CATCH-ALL
-// ==========================================
-app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    message: `Route ${req.originalUrl} not found`,
-  });
-});
-
-// ==========================================
-// GLOBAL ERROR HANDLER
-// ==========================================
-app.use((err, req, res, next) => {
-  console.error("Internal Server Error:", err.stack);
-
-  res.status(500).json({
-    success: false,
-    message: err.message || "Internal Server Error",
-  });
-});
+// AI Assistant
+app.use("/api/assistant", require("./routes/assistantRoutes"));
+// Interview Preparation
+app.use(
+  "/api/interviews",
+  require("./routes/interviewRoutes")
+);
 
 // ==========================================
 // SERVER INITIALIZATION
