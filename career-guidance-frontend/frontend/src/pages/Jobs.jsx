@@ -12,14 +12,16 @@ export default function Jobs() {
   const query = new URLSearchParams(location.search);
   const search = query.get("search");
   const filteredJobs = jobs.filter((job) =>
-  job.title.toLowerCase().includes(search?.toLowerCase() || "")
-);
+    job.title.toLowerCase().includes(search?.toLowerCase() || "")
+  );
 
   // Read student assessment scores from local storage safely
   const studentProfile = (() => {
     try {
-      const user = JSON.parse(localStorage.getItem("user"));
-      const storedResults = JSON.parse(localStorage.getItem("careerTestResults") || "{}");
+      const user = JSON.parse(localStorage.getItem("user")) || {};
+      const storedResults = JSON.parse(
+        localStorage.getItem("careerTestResults") || "{}"
+      );
       return {
         name: user.name || "Student",
         score: storedResults.readinessPercentage || storedResults.score || 82,
@@ -88,38 +90,54 @@ export default function Jobs() {
   }, []);
 
   const handleApply = async (job) => {
-  try {
-    const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+    const rawUser = localStorage.getItem("user");
+    const user = rawUser ? JSON.parse(rawUser) : {};
+    
+    // Resolve JWT token from direct keys or stored user object
+    const token =
+      localStorage.getItem("token") ||
+      localStorage.getItem("career_token") ||
+      user?.token;
 
-    const user = JSON.parse(localStorage.getItem("user"));
-    console.log("Applying with email:", user?.email);
+    if (!token) {
+      alert("Please log in to submit an application.");
+      return;
+    }
 
+    try {
+      const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
-    const payload = {
-      jobId: job._id,
-      jobTitle: job.title,
-      companyName: job.company,
+      console.log("Applying with email:", user?.email);
 
-      applicantName: user.name || "Student",
-      applicantEmail: user?.email,
+      const payload = {
+        jobId: job._id,
+        jobTitle: job.title,
+        companyName: job.company,
+        applicantName: user.name || "Student",
+        applicantEmail: user?.email,
+        education: user.branch || "B.Sc IT",
+        skills: user.skills || job.requiredSkills || [],
+        careerScore: studentProfile.score,
+        matchedCareer: job.title,
+      };
 
-      education: user.branch || "B.Sc IT",
-      skills: user.skills || [],
+      const res = await axios.post(`${API_URL}/api/jobs/apply`, payload, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-      careerScore: studentProfile.score,
-      matchedCareer: job.title,
-    };
-
-    await axios.post(`${API_URL}/api/jobs/apply`, payload);
-
-    setAppliedIds((prev) => [...prev, job._id]);
-
-    alert("🎉 Application submitted successfully!");
-
-  } catch (err) {
-    console.log(err);
-  }
-};
+      setAppliedIds((prev) => [...prev, job._id]);
+      alert(res.data?.message || "🎉 Application submitted successfully!");
+    } catch (err) {
+      console.error("Application error:", err);
+      alert(
+        err.response?.data?.message ||
+          "Failed to submit application. Please verify your login session."
+      );
+    }
+  };
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-8">
@@ -153,25 +171,28 @@ export default function Jobs() {
 
       {/* Filter Options */}
       <div className="flex gap-2 pb-2 overflow-x-auto">
-        {["All", "Full-time", "Internship", "High CTC (≥12 LPA)"].map((filter, i) => (
-          <button
-            key={i}
-            onClick={() => setSelectedDomain(filter)}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap ${
-              selectedDomain === filter
-                ? "bg-blue-600 text-white shadow-md shadow-blue-600/20"
-                : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
-            }`}
-          >
-            {filter}
-          </button>
-        ))}
+        {["All", "Full-time", "Internship", "High CTC (≥12 LPA)"].map(
+          (filter, i) => (
+            <button
+              key={i}
+              onClick={() => setSelectedDomain(filter)}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap ${
+                selectedDomain === filter
+                  ? "bg-blue-600 text-white shadow-md shadow-blue-600/20"
+                  : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+              }`}
+            >
+              {filter}
+            </button>
+          )
+        )}
       </div>
 
       {/* Jobs Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredJobs.map((job) => {
-          const isEligible = studentProfile.score >= (job.minAssessmentScore || 70);
+          const isEligible =
+            studentProfile.score >= (job.minAssessmentScore || 70);
           const hasApplied = appliedIds.includes(job._id);
 
           return (
@@ -189,13 +210,17 @@ export default function Jobs() {
                     <h3 className="text-base font-black text-slate-900 mt-2">
                       {job.title}
                     </h3>
-                    <p className="text-xs font-bold text-blue-600">{job.company}</p>
+                    <p className="text-xs font-bold text-blue-600">
+                      {job.company}
+                    </p>
                   </div>
                   <div className="text-right">
                     <span className="text-sm font-black text-emerald-600 block">
                       {job.ctcPackage || "₹10-14 LPA"}
                     </span>
-                    <span className="text-[10px] text-slate-400">CTC Package</span>
+                    <span className="text-[10px] text-slate-400">
+                      CTC Package
+                    </span>
                   </div>
                 </div>
 
@@ -220,7 +245,10 @@ export default function Jobs() {
               <div className="pt-4 border-t border-slate-100 space-y-3">
                 <div className="flex justify-between items-center text-[11px]">
                   <span className="text-slate-500">
-                    Cutoff: <strong className="text-slate-800">{job.minAssessmentScore || 70}%</strong>
+                    Cutoff:{" "}
+                    <strong className="text-slate-800">
+                      {job.minAssessmentScore || 70}%
+                    </strong>
                   </span>
                   <span
                     className={`font-black px-2 py-0.5 rounded-full text-[10px] ${

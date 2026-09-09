@@ -9,14 +9,23 @@ export default function NotificationDropdown() {
   const dropdownRef = useRef(null);
 
   const fetchAlerts = async () => {
+    // Avoid triggering calls if the user is logged out
+    const token = localStorage.getItem("token") || localStorage.getItem("career_token");
+    if (!token) return;
+
     try {
-      const res = await notificationApi.getStudentNotifications();
+      const res = await (notificationApi.getNotifications 
+        ? notificationApi.getNotifications() 
+        : notificationApi.getStudentNotifications());
+
+      console.log("🔔 NOTIFICATION RESPONSE:", res);
+
       if (res?.success) {
         setNotifications(res.notifications || []);
-        setUnread(res.count || 0);
+        setUnread(res.unreadCount || 0);
       }
     } catch (err) {
-      // Non-blocking fallback
+      console.error("🔔 Notification error:", err);
     }
   };
 
@@ -26,7 +35,7 @@ export default function NotificationDropdown() {
     return () => clearInterval(interval);
   }, []);
 
-  // Close when clicking outside
+  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -36,6 +45,22 @@ export default function NotificationDropdown() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  const getBadgeStyle = (type) => {
+    switch (type) {
+      case "INTERVIEW":
+        return "bg-purple-100 text-purple-700";
+      case "OFFER":
+      case "SHORTLISTED":
+        return "bg-emerald-100 text-emerald-700";
+      case "REJECTED":
+        return "bg-rose-100 text-rose-700";
+      case "JOB_POSTED":
+        return "bg-amber-100 text-amber-700";
+      default:
+        return "bg-blue-100 text-blue-700";
+    }
+  };
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -78,19 +103,17 @@ export default function NotificationDropdown() {
           <div className="max-h-72 overflow-y-auto divide-y divide-slate-100 space-y-1">
             {notifications.length > 0 ? (
               notifications.map((item) => (
-                <div key={item.id} className="p-2.5 rounded-2xl hover:bg-slate-50 transition space-y-1">
+                <div key={item._id || item.id} className="p-2.5 rounded-2xl hover:bg-slate-50 transition space-y-1">
                   <div className="flex items-center justify-between">
                     <span
-                      className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md ${
-                        item.status === "Interview Scheduled"
-                          ? "bg-purple-100 text-purple-700"
-                          : "bg-emerald-100 text-emerald-700"
-                      }`}
+                      className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md ${getBadgeStyle(
+                        item.type
+                      )}`}
                     >
-                      {item.status}
+                      {item.type?.replaceAll("_", " ") || item.status || "NOTIFICATION"}
                     </span>
                     <span className="text-[10px] text-slate-400 font-semibold">
-                      {new Date(item.timestamp).toLocaleDateString()}
+                      {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : ""}
                     </span>
                   </div>
                   <p className="text-xs font-bold text-slate-800 leading-snug">{item.message}</p>

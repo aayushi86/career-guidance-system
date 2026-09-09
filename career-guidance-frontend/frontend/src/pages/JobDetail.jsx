@@ -104,7 +104,7 @@ export default function JobDetail() {
             </div>
             <div>
               <p className="text-[10px] font-bold text-slate-400 uppercase">Package / CTC</p>
-              <p className="text-sm font-bold text-slate-800 mt-0.5">{job.salary || "Competitive"}</p>
+              <p className="text-sm font-bold text-slate-800 mt-0.5">{job.ctcPackage || "Competitive"}</p>
             </div>
             <div>
               <p className="text-[10px] font-bold text-slate-400 uppercase">Target Domain</p>
@@ -122,8 +122,8 @@ export default function JobDetail() {
           <div className="space-y-3 pt-2">
             <h3 className="text-lg font-black text-slate-900">Required Competencies</h3>
             <div className="flex flex-wrap gap-2">
-              {job.skillsRequired && job.skillsRequired.length > 0 ? (
-                job.skillsRequired.map((s, idx) => (
+              {job.requiredSkills && job.requiredSkills.length > 0 ? (
+                job.requiredSkills.map((s, idx) => (
                   <span key={idx} className="px-3.5 py-1.5 bg-slate-100 text-slate-700 font-bold text-xs rounded-xl border border-slate-200/60">
                     {s}
                   </span>

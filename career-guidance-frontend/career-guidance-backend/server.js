@@ -5,12 +5,11 @@ const cors = require("cors");
 
 const connectDB = require("./config/db");
 const resumeRoutes = require("./routes/resumeRoutes");
-const careerRoutes = require("./routes/careerRoutes");
-
+const skillGapRoutes = require("./routes/skillGapRoutes");
 const app = express();
 
 // ==========================================
-// DATABASE (Handles resilient connection)
+// DATABASE
 // ==========================================
 connectDB();
 
@@ -27,92 +26,51 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-
-
 // ==========================================
 // ROUTES
 // ==========================================
 
 // Authentication
-app.use(
-  "/api/auth",
-  require("./routes/authRoutes")
-);
+app.use("/api/auth", require("./routes/authRoutes"));
 
 // Students
-app.use(
-  "/api/students",
-  require("./routes/studentRoutes")
-);
-
+app.use("/api/students", require("./routes/studentRoutes"));
+// Career Progress Dashboard
+app.use("/api/dashboard", require("./routes/dashboardRoutes"));
 // Jobs
-app.use(
-  "/api/jobs",
-  require("./routes/jobRoutes")
-);
+app.use("/api/jobs", require("./routes/jobRoutes"));
 
 // Applications
-app.use(
-  "/api/applications",
-  require("./routes/applicationRoutes")
-);
+app.use("/api/applications", require("./routes/applicationRoutes"));
 
 // Resume
-app.use(
-  "/api/resumes",
-  resumeRoutes
-);
-
-// Compatibility alias
-app.use(
-  "/api/resume",
-  resumeRoutes
-);
+app.use("/api/resumes", resumeRoutes);
+app.use("/api/resume", resumeRoutes); // Compatibility alias
 
 // Career Test
-app.use(
-  "/api/career-test",
-  require("./routes/careerRoutes")
-);
+app.use("/api/career-test", require("./routes/careerRoutes"));
+app.use("/api/assessment", require("./routes/careerRoutes")); // Compatibility alias
 
-// Compatibility alias
+// Skills & AI Roadmap
+app.use("/api/skills", require("./routes/skillRoutes"));
 app.use(
-  "/api/assessment",
-  require("./routes/careerRoutes")
+  "/api/skill-gap",
+  skillGapRoutes
 );
-
-// Skills
-app.use(
-  "/api/skills",
-  require("./routes/skillRoutes")
-);
-
 // Notifications
-app.use(
-  "/api/notifications",
-  require("./routes/notificationRoutes")
-);
+app.use("/api/notifications", require("./routes/notificationRoutes"));
 
 // Recruiter
-app.use(
-  "/api/recruiter",
-  require("./routes/recruiterRoutes")
-);
+app.use("/api/recruiter", require("./routes/recruiterRoutes"));
 
 // Admin
-app.use(
-  "/api/admin",
-  require("./routes/adminRoutes")
-);
+app.use("/api/admin", require("./routes/adminRoutes"));
 
 // AI Assistant
 app.use("/api/assistant", require("./routes/assistantRoutes"));
-// Interview Preparation
-app.use(
-  "/api/interviews",
-  require("./routes/interviewRoutes")
-);
 
+// Interview Preparation
+app.use("/api/interviews", require("./routes/interviewRoutes"));
 // ==========================================
 // SERVER INITIALIZATION
 // ==========================================

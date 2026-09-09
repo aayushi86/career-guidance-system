@@ -1,10 +1,9 @@
 const express = require("express");
 const router = express.Router();
 const Job = require("../models/Job");
+const Student = require("../models/Student");
 const Application = require("../models/Application");
 const Notification = require("../models/Notification");
-const Student = require("../models/Student");
-
 // 1. GET ALL APPLICATIONS FOR RECRUITER (Real DB data)
 router.get("/recruiter/applications", async (req, res) => {
   try {
@@ -16,42 +15,201 @@ router.get("/recruiter/applications", async (req, res) => {
 });
 
 // 2. UPDATE APPLICATION STATUS & DISPATCH NOTIFICATION
+// ==========================================
+// UPDATE APPLICATION STATUS & NOTIFY STUDENT
+// PATCH /api/applications/recruiter/applications/:id
+// ==========================================
+
 router.patch("/recruiter/applications/:id", async (req, res) => {
   try {
-    const { status, interviewDate, interviewTime, interviewLink } = req.body;
-    
-    const updatedApp = await Application.findByIdAndUpdate(
-      req.params.id,
-      { status, interviewDate, interviewTime, interviewLink },
-      { new: true }
+    const {
+      status,
+      interviewDate,
+      interviewTime,
+      interviewLink,
+      interviewNotes,
+    } = req.body;
+
+    const allowedStatuses = [
+      "Applied",
+      "Shortlisted",
+      "Interview Scheduled",
+      "Offer Extended",
+      "Rejected",
+      "Selected",
+    ];
+
+    if (!allowedStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid application status.",
+      });
+    }
+
+    const application = await Application.findById(req.params.id);
+
+    if (!application) {
+      return res.status(404).json({
+        success: false,
+        message: "Application not found.",
+      });
+    }
+
+    const previousStatus = application.status;
+
+    // Update application details
+    application.status = status;
+
+    if (interviewDate !== undefined) {
+      application.interviewDate = interviewDate;
+    }
+
+    if (interviewTime !== undefined) {
+      application.interviewTime = interviewTime;
+    }
+
+    if (interviewLink !== undefined) {
+      application.interviewLink = interviewLink;
+    }
+
+    if (interviewNotes !== undefined) {
+      application.interviewNotes = interviewNotes;
+    }
+
+    await application.save();
+
+
+    // ==========================================
+    // CREATE NOTIFICATION ONLY WHEN STATUS CHANGES
+    // ==========================================
+
+    if (previousStatus !== status) {
+
+      const recipientEmail =
+        application.applicantEmail
+          .toLowerCase()
+          .trim();
+
+
+      // ------------------------------------------
+      // SHORTLISTED
+      // ------------------------------------------
+
+      if (status === "Shortlisted") {
+
+        await Notification.create({
+          recipientEmail,
+
+          title: "🎉 You Have Been Shortlisted!",
+
+          message:
+            `Congratulations! You have been shortlisted for the ${application.jobTitle} position at ${application.companyName}. Stay prepared for the next stage.`,
+
+          type: "SHORTLISTED",
+
+          jobId: application.jobId,
+
+          applicationId: application._id,
+        });
+      }
+
+
+      // ------------------------------------------
+      // INTERVIEW SCHEDULED
+      // ------------------------------------------
+
+      if (status === "Interview Scheduled") {
+
+        await Notification.create({
+          recipientEmail,
+
+          title: "🎯 Interview Scheduled",
+
+          message:
+            `Your interview for ${application.jobTitle} at ${application.companyName} is scheduled on ${application.interviewDate || "the provided date"} at ${application.interviewTime || "the provided time"}.`,
+
+          type: "INTERVIEW",
+
+          jobId: application.jobId,
+
+          applicationId: application._id,
+        });
+      }
+
+
+      // ------------------------------------------
+      // OFFER EXTENDED
+      // ------------------------------------------
+
+      if (
+        status === "Selected" ||
+        status === "Offer Extended"
+      ) {
+
+        await Notification.create({
+          recipientEmail,
+
+          title: "🎉 Congratulations! Application Update",
+
+          message:
+            `Congratulations! ${application.companyName} has updated your application for the ${application.jobTitle} position.`,
+
+          type: "OFFER",
+
+          jobId: application.jobId,
+
+          applicationId: application._id,
+        });
+      }
+
+
+      // ------------------------------------------
+      // REJECTED
+      // ------------------------------------------
+
+      if (status === "Rejected") {
+
+        await Notification.create({
+          recipientEmail,
+
+          title: "Application Status Updated",
+
+          message:
+            `Your application for ${application.jobTitle} at ${application.companyName} has been updated. Thank you for participating in the recruitment process.`,
+
+          type: "REJECTED",
+
+          jobId: application.jobId,
+
+          applicationId: application._id,
+        });
+      }
+    }
+
+
+    return res.status(200).json({
+      success: true,
+
+      message: "Application status updated successfully.",
+
+      application,
+    });
+
+  } catch (error) {
+
+    console.error(
+      "Application status update error:",
+      error
     );
 
-    if (!updatedApp) {
-      return res.status(404).json({ success: false, message: "Application not found" });
-    }
+    return res.status(500).json({
+      success: false,
 
-    // Automatically create a notification document in MongoDB Atlas
-    if (status === "Interview Scheduled") {
-      await Notification.create({
-        recipientEmail: updatedApp.applicantEmail.toLowerCase().trim(),
-        title: "🎯 Interview Scheduled",
-        message: `Your interview for ${updatedApp.jobTitle} at ${updatedApp.companyName} is scheduled on ${interviewDate} at ${interviewTime}.`,
-        type: "INTERVIEW_SCHEDULED",
-        jobId: updatedApp.jobId,
-      });
-    } else if (status === "Selected" || status === "Offer Extended") {
-      await Notification.create({
-        recipientEmail: updatedApp.applicantEmail.toLowerCase().trim(),
-        title: "🎉 Application Update: Offer Extended",
-        message: `Congratulations! ${updatedApp.companyName} has extended an offer for ${updatedApp.jobTitle}.`,
-        type: "APPLICATION_UPDATE",
-        jobId: updatedApp.jobId,
-      });
-    }
+      message:
+        "Failed to update application status.",
 
-    return res.status(200).json({ success: true, application: updatedApp });
-  } catch (err) {
-    return res.status(500).json({ success: false, message: "Error updating status", error: err.message });
+      error: error.message,
+    });
   }
 });
 

@@ -1,9 +1,25 @@
-import { request } from "./api";
-
 export const resumeApi = {
-  analyze: (payload) =>
-    request("/resume/analyze", {
-      method: "POST",
-      body: JSON.stringify(payload),
+  analyze: (formData) =>
+    fetch(
+      "http://localhost:5000/api/resumes/analyze",
+      {
+        method: "POST",
+        headers: {
+          Authorization:
+            `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: formData,
+      }
+    ).then(async (response) => {
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.message ||
+          "Resume analysis failed."
+        );
+      }
+
+      return data;
     }),
 };

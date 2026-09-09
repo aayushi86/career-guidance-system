@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import AuthModal from "../common/AuthModal";
 import NotificationDropdown from "./NotificationDropdown";
+import { FaBrain } from "react-icons/fa";
 
 export default function Navbar({ onOpenAuth }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -97,7 +98,8 @@ export default function Navbar({ onOpenAuth }) {
                       dropdownOpen ||
                       isActive("/career-test") ||
                       isActive("/resume-analyzer") ||
-                      isActive("/skill-gap")
+                      isActive("/skill-gap") ||
+                      isActive("/career-roadmap")
                         ? "bg-white text-blue-600 shadow-sm"
                         : "text-slate-600 hover:text-slate-900"
                     }`}
@@ -133,6 +135,20 @@ export default function Navbar({ onOpenAuth }) {
                         <div>
                           <p className="text-sm font-bold text-slate-800">Resume Analyzer</p>
                           <p className="text-xs text-slate-500">ATS scoring & optimization</p>
+                        </div>
+                      </Link>
+
+                      <Link
+                        to="/career-roadmap"
+                        onClick={closeDropdown}
+                        className="group flex items-start gap-3 rounded-2xl p-3 transition hover:bg-indigo-50/70"
+                      >
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-100 font-bold text-indigo-600 transition group-hover:bg-indigo-600 group-hover:text-white">
+                          <FaBrain />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-slate-800">AI Career Roadmap</p>
+                          <p className="text-xs text-slate-500">4-month milestone action plan</p>
                         </div>
                       </Link>
 
@@ -301,6 +317,14 @@ export default function Navbar({ onOpenAuth }) {
                   className="block py-2 text-base font-bold text-slate-800"
                 >
                   📄 Resume Analyzer
+                </Link>
+
+                <Link
+                  to="/career-roadmap"
+                  onClick={closeMobileMenu}
+                  className="block py-2 text-base font-bold text-slate-800"
+                >
+                  🧠 AI Career Roadmap
                 </Link>
 
                 <Link

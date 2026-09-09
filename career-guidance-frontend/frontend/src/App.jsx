@@ -5,7 +5,7 @@ import CareerTest from "./pages/CareerTest";
 import Jobs from "./pages/Jobs";
 import SkillGap from "./pages/SkillGap";
 import ResumeAnalyzer from "./pages/ResumeAnalyzer";
-import StudentDashboard from "./pages/StudentDashboard";
+import Dashboard from "./pages/Dashboard";
 import MyApplications from "./pages/MyApplications";
 import Navbar from "./components/Navbar/Navbar";
 import StudentProfile from "./pages/StudentProfile";
@@ -16,20 +16,17 @@ import RecruiterDashboard from "./pages/RecruiterDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import AICareerAssistant from "./pages/AICareerAssistant";
 import InterviewPrep from "./pages/InterviewPrep";
+import CareerRoadmap from "./pages/CareerRoadmap";
 
 export default function App() {
   return (
     <div className="relative min-h-screen bg-[#F8FAFC] text-slate-900 font-sans antialiased">
-
       {/* NAVBAR */}
       <Navbar />
 
       <main className="relative">
-
         <Routes>
-
           {/* ================= PUBLIC ROUTES ================= */}
-
           <Route path="/" element={<Home />} />
           <Route path="/career-test" element={<CareerTest />} />
           <Route path="/jobs" element={<Jobs />} />
@@ -37,15 +34,31 @@ export default function App() {
           <Route path="/skill-gap" element={<SkillGap />} />
           <Route path="/resume-analyzer" element={<ResumeAnalyzer />} />
           <Route path="/contact" element={<Contact />} />
-          
+          <Route path="/ai-assistant" element={<AICareerAssistant />} />
+          <Route path="/interview-prep" element={<InterviewPrep />} />
 
-          {/* ================= STUDENT ROUTES ================= */}
-
+          {/* ================= STUDENT ROUTES (PROTECTED) ================= */}
           <Route
             path="/dashboard"
             element={
               <ProtectedRoute allowedRoles={["student"]}>
-                <StudentDashboard />
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+<Route
+  path="/interview-prep"
+  element={
+    <ProtectedRoute allowedRoles={["student"]}>
+      <InterviewPrep />
+    </ProtectedRoute>
+  }
+/>
+          <Route
+            path="/career-roadmap"
+            element={
+              <ProtectedRoute allowedRoles={["student"]}>
+                <CareerRoadmap />
               </ProtectedRoute>
             }
           />
@@ -68,12 +81,7 @@ export default function App() {
             }
           />
 
-          <Route path="/ai-assistant" element={<AICareerAssistant />} />
-          <Route path="/interview-prep" element={<InterviewPrep />} />
-
-
           {/* ================= RECRUITER ROUTE ================= */}
-
           <Route
             path="/recruiter/dashboard"
             element={
@@ -84,7 +92,6 @@ export default function App() {
           />
 
           {/* ================= ADMIN ROUTE ================= */}
-
           <Route
             path="/admin"
             element={
@@ -93,9 +100,7 @@ export default function App() {
               </ProtectedRoute>
             }
           />
-
         </Routes>
-
       </main>
     </div>
   );
