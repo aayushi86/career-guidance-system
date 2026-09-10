@@ -9,31 +9,45 @@ export default function NotificationDropdown() {
   const dropdownRef = useRef(null);
 
   const fetchAlerts = async () => {
-    // Avoid triggering calls if the user is logged out
+  try {
     const token = localStorage.getItem("token") || localStorage.getItem("career_token");
     if (!token) return;
 
-    try {
-      const res = await (notificationApi.getNotifications 
-        ? notificationApi.getNotifications() 
-        : notificationApi.getStudentNotifications());
-
-      console.log("🔔 NOTIFICATION RESPONSE:", res);
-
-      if (res?.success) {
-        setNotifications(res.notifications || []);
-        setUnread(res.unreadCount || 0);
-      }
-    } catch (err) {
-      console.error("🔔 Notification error:", err);
+    const user = JSON.parse(localStorage.getItem("user"));
+    if (!user?.email) {
+      console.log("⚠️ No user email found");
+      return;
     }
-  };
+    const res = await notificationApi.getStudentNotifications();
+
+    if (res?.success) {
+      setNotifications(res.notifications || []);
+      setUnread(res.unreadCount || 0);
+    }
+
+  } catch (err) {
+    if (err.message.includes("Failed to fetch")) {
+      console.log("⚠️ Backend not running");
+      return;
+    }
+    console.error("🔔 Notification error:", err);
+  }
+};
 
   useEffect(() => {
-    fetchAlerts();
-    const interval = setInterval(fetchAlerts, 20000); // Polling every 20s
-    return () => clearInterval(interval);
-  }, []);
+  const token = localStorage.getItem("token") || localStorage.getItem("career_token");
+
+  if (!token) {
+    console.log("⛔ No token, skipping notifications");
+    return;
+  }
+
+  fetchAlerts(); // ✅ only runs when token exists
+
+  const interval = setInterval(fetchAlerts, 20000);
+
+  return () => clearInterval(interval);
+}, []);
 
   // Close dropdown when clicking outside
   useEffect(() => {

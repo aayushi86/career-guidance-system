@@ -27,13 +27,12 @@ function getStoredToken() {
 export async function request(endpoint, options = {}) {
   const token = getStoredToken();
 
-  // Debug logging to verify token status in the browser console
-  console.log(`[API Request] ${endpoint} | Token present:`, Boolean(token));
+  console.log(`[API Request] ${endpoint} | Token:`, token);
 
   const headers = {
     "Content-Type": "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...options.headers,
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
@@ -41,10 +40,15 @@ export async function request(endpoint, options = {}) {
     headers,
   });
 
-  const data = await response.json();
+  let data;
+  try {
+    data = await response.json();
+  } catch {
+    throw new Error("Invalid JSON response (backend issue)");
+  }
 
   if (!response.ok) {
-    throw new Error(data.message || `Request failed with status ${response.status}`);
+    throw new Error(data.message || "Request failed");
   }
 
   return data;

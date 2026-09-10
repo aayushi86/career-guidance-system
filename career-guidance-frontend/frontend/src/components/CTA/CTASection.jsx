@@ -1,7 +1,10 @@
 import { motion } from "framer-motion";
 import { FaArrowRight, FaStar } from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
+
 
 function CTASection() {
+  const navigate = useNavigate();
   return (
     <section className="relative overflow-hidden bg-white py-20">
 
@@ -59,19 +62,20 @@ function CTASection() {
             {/* Buttons */}
             <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
 
-              {/* Primary Button */}
+              {/* Primary Button - Guest Mode */}
               <motion.button
+                onClick={() => navigate("/guest-dashboard")}
                 whileHover={{ y: -3, scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 className="group flex items-center justify-center gap-2 rounded-xl bg-white px-7 py-3.5 font-bold text-blue-600 shadow-xl transition-colors duration-300 hover:bg-slate-50"
               >
                 Get Started For Free
-
                 <FaArrowRight className="transition-transform duration-300 group-hover:translate-x-1" />
               </motion.button>
 
-              {/* Secondary Button */}
+              {/* Secondary Button - Features */}
               <motion.button
+                onClick={() => navigate("/features")}
                 whileHover={{ y: -3 }}
                 whileTap={{ scale: 0.98 }}
                 className="rounded-xl border border-white/30 bg-white/10 px-7 py-3.5 font-semibold text-white backdrop-blur-sm transition-all duration-300 hover:bg-white/20"

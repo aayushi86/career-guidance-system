@@ -8,7 +8,8 @@ import { FaBrain } from "react-icons/fa";
 export default function Navbar({ onOpenAuth }) {
   const [isOpen, setIsOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
-
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  
   const [authModal, setAuthModal] = useState({
     open: false,
     mode: "signin",

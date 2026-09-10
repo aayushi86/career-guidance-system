@@ -103,6 +103,15 @@ router.get("/my-applications", protect, async (req, res) => {
 // ==========================================
 router.post("/", protect, async (req, res) => {
   try {
+
+      //restrict access
+    if (req.user.role !== "recruiter") {
+  return res.status(403).json({
+    success: false,
+    message: "Only recruiters can post jobs",
+  });
+}
+
     const {
       company,
       title,
@@ -121,7 +130,9 @@ router.post("/", protect, async (req, res) => {
       minAssessmentScore: Number(minAssessmentScore) || 0,
       minCgpa: Number(minCgpa) || 0,
       eligibleBranches,
-      requiredSkills,
+      requiredSkills: requiredSkills
+        ? requiredSkills.split(",").map((s) => s.trim())
+        : [],
       description,
       status: "Active",
       postedBy: req.user?._id,
@@ -314,8 +325,37 @@ router.patch("/recruiter/applications/:id", protect, async (req, res) => {
   }
 });
 
+
 // ==========================================
-// 8. GET JOB BY ID (Must follow static subroutes)
+// 8. GET JOBS POSTED BY RECRUITER
+// ==========================================
+router.get("/recruiter/my-jobs", protect, async (req, res) => {
+  console.log("USER:", req.user);
+  try {
+    if (req.user.role !== "recruiter") {
+      return res.status(403).json({
+        success: false,
+        message: "Only recruiters can view their jobs",
+      });
+    }
+
+    const jobs = await Job.find({ postedBy: req.user._id }).sort({ createdAt: -1 });
+
+    return res.status(200).json({
+      success: true,
+      jobs,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: "Error fetching recruiter jobs",
+      error: err.message,
+    });
+  }
+});
+
+// ==========================================
+// 9. GET JOB BY ID (Must follow static subroutes)
 // ==========================================
 router.get("/:id", async (req, res) => {
   try {

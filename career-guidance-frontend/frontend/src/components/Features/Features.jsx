@@ -18,6 +18,7 @@ import Card from "../ui/Card";
 import SectionTitle from "../ui/SectionTitle";
 import Badge from "../ui/Badge";
 
+
 // Motion container variants for staggered child animations
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -220,6 +221,7 @@ function Features() {
           ))}
         </motion.div>
       </div>
+
     </section>
   );
 }

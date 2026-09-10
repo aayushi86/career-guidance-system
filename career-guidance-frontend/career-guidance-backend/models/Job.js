@@ -21,7 +21,11 @@ const jobSchema = new mongoose.Schema(
     },
     requiredSkills: {
       type: [String],
-      default: ["Python", "SQL", "JavaScript"],
+      default: [],
+    },
+    vacancies: {
+      type: Number,
+      default: 1,
     },
 
     // Recruitment Process Steps
@@ -32,7 +36,7 @@ const jobSchema = new mongoose.Schema(
 
     description: { type: String, default: "Seeking high-performing engineering students for campus hiring." },
     deadline: { type: Date, default: () => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) },
-    postedBy: { type: String, default: "Recruiter" },
+    postedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User",},
     recruiterEmail: { type: String, default: "recruiter@company.com" },
     status: { type: String, default: "Active", enum: ["Active", "Closed", "Under Review"] },
   },

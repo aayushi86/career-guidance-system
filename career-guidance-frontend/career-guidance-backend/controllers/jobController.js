@@ -11,7 +11,7 @@ const createJNF = async (req, res) => {
     const newJob = await Job.create(req.body);
 
     // 2. Get all students
-    const students = await Student.find({}, "email");
+    const students = await User.find({ role: "student" }, "email");
 
     // 3. Create notification for every student
     if (students.length > 0) {

@@ -1,11 +1,11 @@
 import { request } from "./api";
 
 export const authApi = {
-  sendOtp: (email) =>
-    request("/auth/send-otp", {
-      method: "POST",
-      body: JSON.stringify({ email }),
-    }),
+  sendOtp: (data) =>
+  request("/auth/send-otp", {
+    method: "POST",
+    body: JSON.stringify(data), // { name, email }
+  }),
 
   verifyOtp: (payload) =>
     request("/auth/verify-otp", {

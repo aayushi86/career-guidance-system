@@ -4,6 +4,7 @@ import axios from "axios";
 export default function RecruiterDashboard() {
   // Applications & UI states
   const [applications, setApplications] = useState([]);
+  const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedCandidate, setSelectedCandidate] = useState(null);
   const [showCandidateModal, setShowCandidateModal] = useState(false);
@@ -20,15 +21,16 @@ export default function RecruiterDashboard() {
   // JNF Modal State
   const [showJNFModal, setShowJNFModal] = useState(false);
   const [jnfForm, setJnfForm] = useState({
-    company: "",
-    title: "",
-    ctcPackage: "12-16 LPA",
-    minAssessmentScore: 75,
-    minCgpa: 7.0,
-    eligibleBranches: "B.Sc IT, B.Tech CSE, MCA",
-    requiredSkills: "Python, SQL, React",
-    description: "",
-  });
+  company: "",
+  title: "",
+  ctcPackage: "",
+  minAssessmentScore: "",
+  minCgpa: "",
+  eligibleBranches: "",
+  requiredSkills: "",   // input string
+  description: "",
+  vacancies: "",        
+});
 
   // Search & Filter States
   const [searchQuery, setSearchQuery] = useState("");
@@ -70,8 +72,26 @@ export default function RecruiterDashboard() {
     }
   };
 
+    const fetchJobs = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        console.log("TOKEN:", token);
+
+        const res = await axios.get(`${API_URL}/api/jobs/recruiter/my-jobs`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+
+        if (res.data?.success) {
+          setJobs(res.data.jobs);
+        }
+      } catch (err) {
+        console.error("Error fetching recruiter jobs:", err.message);
+      }
+    };
+
   useEffect(() => {
     fetchApplications();
+    fetchJobs();
   }, []);
 
   // Status Updater with Backend Sync
@@ -125,6 +145,7 @@ export default function RecruiterDashboard() {
 
       if (res.data?.success) {
         alert("✅ JNF drive successfully created in MongoDB Atlas and broadcast to students!");
+        fetchJobs(); // ✅ ADD THIS LINE
         setShowJNFModal(false);
         setJnfForm({
           company: "",
@@ -214,6 +235,58 @@ export default function RecruiterDashboard() {
         ))}
       </div>
 
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <h2 className="text-lg font-bold mb-3">My Posted Jobs</h2>
+
+        {jobs.length === 0 ? (
+          <p className="text-sm text-gray-500">No jobs posted yet</p>
+        ) : (
+          jobs.map((job) => (
+            <div
+              key={job._id}
+              className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition"
+            >
+              {/* Location */}
+              <p className="text-xs text-slate-500 mb-1">
+                {job.location || "Mumbai / Hybrid"}
+              </p>
+
+              {/* Title */}
+              <h3 className="text-lg font-bold text-slate-900">
+                {job.title}
+              </h3>
+
+              {/* Company */}
+              <p className="text-sm text-slate-600 mb-2">
+                {job.company}
+              </p>
+
+              {/* CTC */}
+              <p className="text-sm font-semibold text-blue-600 mb-2">
+                {job.ctcPackage} CTC Package
+              </p>
+
+              {/* Skills */}
+              <div className="flex flex-wrap gap-2 mb-2">
+                {job.requiredSkills?.map((skill, idx) => (
+                  <span
+                    key={idx}
+                    className="bg-slate-100 text-slate-700 px-2 py-1 rounded text-xs"
+                  >
+                    {skill}
+                  </span>
+                ))}
+              </div>
+
+              {/* Cutoff */}
+              <p className="text-xs text-slate-500">
+                Cutoff: <span className="font-bold">{job.minAssessmentScore}%</span>
+              </p>
+            </div>
+          ))
+        )}
+      </div>
+
       {/* Search & Filter Controls */}
       <div className="bg-white border border-slate-200/90 rounded-3xl p-6 shadow-sm space-y-4">
         <div className="flex flex-col lg:flex-row gap-4 justify-between items-stretch lg:items-center">
@@ -270,6 +343,7 @@ export default function RecruiterDashboard() {
           ))}
         </div>
       </div>
+
 
       {/* Applications Table */}
       <div className="bg-white border border-slate-200/90 rounded-3xl p-6 shadow-sm space-y-4">
@@ -747,6 +821,53 @@ export default function RecruiterDashboard() {
                   type="text"
                   value={jnfForm.eligibleBranches}
                   onChange={(e) => setJnfForm({ ...jnfForm, eligibleBranches: e.target.value })}
+                  className="w-full p-2.5 rounded-xl border border-slate-200"
+                />
+              </div>
+
+              {/* Skills */}
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">
+                  Required Skills (comma separated)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Python, Node.js, MongoDB"
+                  value={jnfForm.requiredSkills}
+                  onChange={(e) =>
+                    setJnfForm({ ...jnfForm, requiredSkills: e.target.value })
+                  }
+                  className="w-full p-2.5 rounded-xl border border-slate-200"
+                />
+              </div>
+
+              {/* Job Description */}
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">
+                  Job Description
+                </label>
+                <textarea
+                  placeholder="Describe role responsibilities..."
+                  value={jnfForm.description}
+                  onChange={(e) =>
+                    setJnfForm({ ...jnfForm, description: e.target.value })
+                  }
+                  className="w-full p-2.5 rounded-xl border border-slate-200"
+                />
+              </div>
+
+              {/* Vacancies */}
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">
+                  Number of Vacancies
+                </label>
+                <input
+                  type="number"
+                  placeholder="e.g. 5"
+                  value={jnfForm.vacancies}
+                  onChange={(e) =>
+                    setJnfForm({ ...jnfForm, vacancies: e.target.value })
+                  }
                   className="w-full p-2.5 rounded-xl border border-slate-200"
                 />
               </div>

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { authApi } from "../../services/authApi";
+import { useNavigate } from "react-router-dom";
 
 export default function AuthModal({ isOpen, onClose }) {
   const [step, setStep] = useState("email"); // "email" | "otp"
@@ -11,23 +12,28 @@ export default function AuthModal({ isOpen, onClose }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const { login } = useAuth();
-
+  const navigate = useNavigate();
+  
   if (!isOpen) return null;
 
   const handleSendOtp = async (e) => {
     e.preventDefault();
+    if (!name || !email) {
+    setError("Please enter name and email");
+    return;
+  }
     setLoading(true);
     setError("");
 
     try {
-      const res = await authApi.sendOtp(email);
-      if (res.success) {
+        const res = await authApi.sendOtp({ name, email });      
+        console.log("OTP RESPONSE:", res);
+        if (res?.message || res?.success) {
         setStep("otp");
       }
     } catch (err) {
-      setError(err.message || "Failed to send OTP.");
-    } finally {
-      setLoading(false);
+        setError(err.response?.data?.message || err.message || "Failed to send OTP.");    } finally {
+        setLoading(false);
     }
   };
 
@@ -38,9 +44,20 @@ export default function AuthModal({ isOpen, onClose }) {
 
     try {
       const res = await authApi.verifyOtp({ email, otp, name, role });
-      if (res.success) {
-        login(res.user, res.token);
+      console.log("VERIFY RESPONSE:", res);
+      const user = res.user || res.data?.user;
+      const token = res.token || res.data?.token;
+
+      if (user && token) {
+        login(user, token);
         onClose();
+        if (user.role === "recruiter") {
+          navigate("/recruiter/dashboard");
+        } else {
+          navigate("/student/dashboard");
+        }
+      } else {
+      setError("Invalid response from server");
       }
     } catch (err) {
       setError(err.message || "Invalid OTP code.");

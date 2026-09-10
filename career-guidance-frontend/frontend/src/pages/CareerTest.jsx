@@ -1,5 +1,6 @@
 import React, { useState, useRef } from "react";
 import { Link } from "react-router-dom";
+import { request } from "../services/api";
 
 // ======================================================
 // CONSTANTS & OPTIONS
@@ -94,46 +95,56 @@ export default function CareerTest() {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-    setResult(null);
-    setJobs([]);
-    setAppliedJobIds([]);
+  e.preventDefault();
+  setLoading(true);
+  setError("");
+  setResult(null);
+  setJobs([]);
+  setAppliedJobIds([]);
 
-    if (formData.skills.length === 0) {
-      setError("Please select at least one skill to calculate your match.");
-      setLoading(false);
-      return;
+  if (formData.skills.length === 0) {
+    setError("Please select at least one skill to calculate your match.");
+    setLoading(false);
+    return;
+  }
+
+  if (formData.interests.length === 0) {
+    setError("Please pick at least one area of interest.");
+    setLoading(false);
+    return;
+  }
+
+  try {
+    const token = localStorage.getItem("token");
+
+    const response = await fetch("http://localhost:5000/api/career-test", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(formData), // ✅ FIXED
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || "Failed to process evaluation");
     }
-    if (formData.interests.length === 0) {
-      setError("Please pick at least one area of interest.");
-      setLoading(false);
-      return;
-    }
 
-    try {
-      const response = await fetch("http://localhost:5000/api/career-test", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
+    setResult(data.result);
+    localStorage.setItem("careerResult", JSON.stringify(data.result));
 
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Failed to process evaluation");
+    setTimeout(() => {
+      resultsRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 150);
 
-      setResult(data.result);
-      localStorage.setItem("careerResult", JSON.stringify(data.result));
-
-      setTimeout(() => {
-        resultsRef.current?.scrollIntoView({ behavior: "smooth" });
-      }, 150);
-    } catch (err) {
-      setError(err.message || "Server error while submitting test.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  } catch (err) {
+    setError(err.message || "Server error while submitting test.");
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleExploreJobs = async () => {
       const saved = JSON.parse(localStorage.getItem("careerResult"));

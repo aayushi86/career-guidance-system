@@ -4,6 +4,7 @@ export const jobsApi = {
   // Aliases to satisfy both getAll and getJobs calls across components
   getAll: () => request("/jobs"),
   getJobs: () => request("/jobs"),
+  getMyJobs: () => request("/jobs/recruiter/my-jobs"),
   getJobById: (id) => request(`/jobs/${id}`),
   applyJob: (payload) =>
     request("/jobs/apply", {
@@ -11,3 +12,8 @@ export const jobsApi = {
       body: JSON.stringify(payload),
     }),
 };
+
+export const getRecruiterJobs = () =>
+  request("/jobs/recruiter/my-jobs", {
+    method: "GET",
+  });

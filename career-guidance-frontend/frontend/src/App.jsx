@@ -17,6 +17,8 @@ import AdminDashboard from "./pages/AdminDashboard";
 import AICareerAssistant from "./pages/AICareerAssistant";
 import InterviewPrep from "./pages/InterviewPrep";
 import CareerRoadmap from "./pages/CareerRoadmap";
+import GuestDashboard from "./pages/GuestDashboard";
+import FeaturesPage from "./pages/FeaturesPage";
 
 export default function App() {
   return (
@@ -31,11 +33,9 @@ export default function App() {
           <Route path="/career-test" element={<CareerTest />} />
           <Route path="/jobs" element={<Jobs />} />
           <Route path="/jobs/:id" element={<JobDetail />} />
-          <Route path="/skill-gap" element={<SkillGap />} />
-          <Route path="/resume-analyzer" element={<ResumeAnalyzer />} />
           <Route path="/contact" element={<Contact />} />
-          <Route path="/ai-assistant" element={<AICareerAssistant />} />
-          <Route path="/interview-prep" element={<InterviewPrep />} />
+          <Route path="/guest-dashboard" element={<GuestDashboard />} />
+          <Route path="/features" element={<FeaturesPage />} />
 
           {/* ================= STUDENT ROUTES (PROTECTED) ================= */}
           <Route
@@ -46,14 +46,7 @@ export default function App() {
               </ProtectedRoute>
             }
           />
-<Route
-  path="/interview-prep"
-  element={
-    <ProtectedRoute allowedRoles={["student"]}>
-      <InterviewPrep />
-    </ProtectedRoute>
-  }
-/>
+
           <Route
             path="/career-roadmap"
             element={
@@ -77,6 +70,42 @@ export default function App() {
             element={
               <ProtectedRoute allowedRoles={["student"]}>
                 <MyApplications />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/ai-assistant"
+            element={
+              <ProtectedRoute allowedRoles={["student"]}>
+                <AICareerAssistant />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/resume-analyzer"
+            element={
+              <ProtectedRoute allowedRoles={["student"]}>
+                <ResumeAnalyzer />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/skill-gap"
+            element={
+              <ProtectedRoute allowedRoles={["student"]}>
+                <SkillGap />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/interview-prep"
+            element={
+              <ProtectedRoute allowedRoles={["student"]}>
+                <InterviewPrep />
               </ProtectedRoute>
             }
           />
